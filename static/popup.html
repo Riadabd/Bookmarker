@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Bookmark Folder Finder</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body>
+    <main class="dialog">
+      <header class="dialog__header">
+        <h1 class="dialog__title">Edit bookmark</h1>
+      </header>
+      <section class="field-group">
+        <label class="field-group__label" for="bookmark-name">Name</label>
+        <input id="bookmark-name" class="text-input" type="text" autocomplete="off" />
+      </section>
+      <section class="field-group">
+        <div class="field-group__label">Location</div>
+        <div class="search-panel">
+          <input
+            id="folder-search"
+            class="text-input search-panel__input"
+            type="search"
+            placeholder="Search for folders"
+            autocomplete="off"
+          />
+          <ul id="folder-results" class="folder-list" role="listbox" aria-label="Bookmark folders"></ul>
+        </div>
+      </section>
+      <footer class="dialog__footer">
+        <label class="checkbox">
+          <input id="show-editor" type="checkbox" checked disabled />
+          <span>Show editor when saving</span>
+        </label>
+        <div class="dialog__buttons">
+          <button id="remove-bookmark" class="button button--ghost" type="button">Remove bookmark</button>
+          <button id="save-bookmark" class="button button--primary" type="button">Save</button>
+        </div>
+      </footer>
+    </main>
+    <script type="module" src="popup.js"></script>
+  </body>
+</html>

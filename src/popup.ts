@@ -35,7 +35,7 @@ async function bootstrap(): Promise<void> {
   renderResults(allFolders.slice(0, 25));
   wireEvents();
   removeButton.disabled = true; // Removal is not implemented yet, keep UI parity but disabled.
-  updateSaveButtonState(true);
+  updateSaveButtonState();
 }
 
 async function populateTabDetails(): Promise<void> {
@@ -98,7 +98,7 @@ function wireEvents(): void {
     const query = searchInput.value.trim().toLowerCase();
     const results = query ? filterFolders(query) : allFolders.slice(0, 50);
     renderResults(results);
-    updateSaveButtonState(true);
+    updateSaveButtonState();
   });
 
   saveButton.addEventListener('click', async () => {
@@ -119,7 +119,7 @@ function renderResults(folders: FolderEntry[]): void {
     empty.className = 'empty-state';
     empty.textContent = 'No matching folders';
     resultsList.appendChild(empty);
-    updateSaveButtonState(false);
+    updateSaveButtonState();
     return;
   }
 
@@ -163,7 +163,7 @@ function renderResults(folders: FolderEntry[]): void {
     resultsList.appendChild(item);
   }
 
-  updateSaveButtonState(false);
+  updateSaveButtonState();
 }
 
 function toggleSelection(folderId: string, shouldSelect: boolean): void {
@@ -175,7 +175,6 @@ function toggleSelection(folderId: string, shouldSelect: boolean): void {
   const query = searchInput.value.trim().toLowerCase();
   const foldersToRender = query ? filterFolders(query) : allFolders.slice(0, 50);
   renderResults(foldersToRender);
-  updateSaveButtonState(true);
 }
 
 async function saveBookmarks(): Promise<void> {
@@ -184,7 +183,6 @@ async function saveBookmarks(): Promise<void> {
   }
 
   saveButton.disabled = true;
-  saveButton.textContent = 'Saving…';
 
   try {
     const [activeTab] = await browser.tabs.query({ active: true, currentWindow: true });
@@ -195,29 +193,28 @@ async function saveBookmarks(): Promise<void> {
     const title = nameInput.value.trim() || activeTab.title || activeTab.url;
     const targetFolders = Array.from(selectedFolderIds);
 
-    // Creating bookmarks in parallel keeps the popup responsive for multi-select saves.
-    await Promise.all(
-      targetFolders.map((folderId) =>
-        browser.bookmarks.create({ parentId: folderId, title, url: activeTab.url })
-      )
-    );
+    void browser.runtime
+      .sendMessage({
+        type: 'create-bookmarks',
+        payload: {
+          folders: targetFolders,
+          title,
+          url: activeTab.url,
+        },
+      })
+      .catch((error) => {
+        console.error('Failed to queue bookmark creation', error);
+      });
 
-    saveButton.textContent = 'Saved';
-    window.setTimeout(() => window.close(), 400);
+    window.close();
   } catch (error) {
     console.error('Failed to save bookmarks', error);
-    saveButton.textContent = 'Retry';
-  } finally {
-    updateSaveButtonState(false);
+    updateSaveButtonState();
   }
 }
 
-function updateSaveButtonState(resetText: boolean): void {
-  const shouldDisable = selectedFolderIds.size === 0;
-  saveButton.disabled = shouldDisable;
-  if (resetText && !shouldDisable) {
-    saveButton.textContent = 'Save';
-  }
+function updateSaveButtonState(): void {
+  saveButton.disabled = selectedFolderIds.size === 0;
 }
 
 bootstrap().catch((error) => {

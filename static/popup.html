@@ -13,7 +13,12 @@
       </header>
       <section class="field-group">
         <label class="field-group__label" for="bookmark-name">Name</label>
-        <input id="bookmark-name" class="text-input" type="text" autocomplete="off" />
+        <input
+          id="bookmark-name"
+          class="text-input"
+          type="text"
+          autocomplete="off"
+        />
       </section>
       <section class="field-group">
         <div class="field-group__label">Location</div>
@@ -25,17 +30,30 @@
             placeholder="Search for folders"
             autocomplete="off"
           />
-          <ul id="folder-results" class="folder-list" role="listbox" aria-label="Bookmark folders"></ul>
+          <ul
+            id="folder-results"
+            class="folder-list"
+            role="listbox"
+            aria-label="Bookmark folders"
+          ></ul>
         </div>
       </section>
       <footer class="dialog__footer">
-        <label class="checkbox">
-          <input id="show-editor" type="checkbox" checked disabled />
-          <span>Show editor when saving</span>
-        </label>
         <div class="dialog__buttons">
-          <button id="remove-bookmark" class="button button--ghost" type="button">Remove bookmark</button>
-          <button id="save-bookmark" class="button button--primary" type="button">Save</button>
+          <button
+            id="remove-bookmark"
+            class="button button--ghost"
+            type="button"
+          >
+            Remove bookmark
+          </button>
+          <button
+            id="save-bookmark"
+            class="button button--primary"
+            type="button"
+          >
+            Save
+          </button>
         </div>
       </footer>
     </main>

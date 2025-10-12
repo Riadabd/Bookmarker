@@ -5,6 +5,22 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bookmark Folder Finder</title>
     <link rel="stylesheet" href="popup.css" />
+    <style>
+      body {
+        min-width: 520px;
+        max-width: 720px;
+        margin: 0 auto;
+      }
+      .dialog {
+        min-height: 80vh;
+      }
+      .dialog__footer {
+        position: sticky;
+        bottom: 0;
+        background: var(--bg);
+        padding-top: 12px;
+      }
+    </style>
   </head>
   <body>
     <main class="dialog">
@@ -43,6 +59,7 @@
           id="open-full-view"
           class="button button--ghost"
           type="button"
+          hidden
         >
           Open full view
         </button>

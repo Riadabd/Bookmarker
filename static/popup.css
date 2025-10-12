@@ -115,13 +115,6 @@ body {
   color: var(--text-muted);
 }
 
-.dialog__footer {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-}
-
 .checkbox {
   display: inline-flex;
   align-items: center;
@@ -132,6 +125,13 @@ body {
 
 .checkbox input {
   accent-color: var(--bg-active);
+}
+
+.dialog__footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
 }
 
 .dialog__buttons {
@@ -163,7 +163,9 @@ body {
   border-color: var(--border);
 }
 
-.button--ghost {
+.button--danger {
+  background: transparent;
+  border-color: var(--border);
   color: var(--danger);
 }
 

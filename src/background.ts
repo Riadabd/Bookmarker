@@ -1,7 +1,7 @@
 /// <reference types="firefox-webext-browser" />
 
 type CreateBookmarksMessage = {
-  type: 'create-bookmarks';
+  type: "create-bookmarks";
   payload: {
     folders: string[];
     title: string;
@@ -9,18 +9,25 @@ type CreateBookmarksMessage = {
   };
 };
 
-type RuntimeMessage = CreateBookmarksMessage | { type: string } | undefined | null;
+type RuntimeMessage =
+  | CreateBookmarksMessage
+  | { type: string }
+  | undefined
+  | null;
 
 function isCreateBookmarksMessage(
   message: RuntimeMessage
 ): message is CreateBookmarksMessage {
-  if (!message || typeof message !== 'object') {
+  if (!message || typeof message !== "object") {
     return false;
   }
-  if (message.type !== 'create-bookmarks') {
+  if (message.type !== "create-bookmarks") {
     return false;
   }
-  return 'payload' in message && Array.isArray((message as CreateBookmarksMessage).payload.folders);
+  return (
+    "payload" in message &&
+    Array.isArray((message as CreateBookmarksMessage).payload.folders)
+  );
 }
 
 browser.runtime.onMessage.addListener((message: RuntimeMessage) => {
@@ -35,13 +42,19 @@ browser.runtime.onMessage.addListener((message: RuntimeMessage) => {
 
   // Perform the writes asynchronously so the popup can close without waiting.
   return createBookmarks(folders, title, url).catch((error) => {
-    console.error('Failed to create bookmarks', error);
+    console.error("Failed to create bookmarks", error);
     throw error;
   });
 });
 
-async function createBookmarks(folderIds: string[], title: string, url: string): Promise<void> {
-  for (const parentId of folderIds) {
-    await browser.bookmarks.create({ parentId, title, url, type: 'bookmark' });
-  }
+async function createBookmarks(
+  folderIds: string[],
+  title: string,
+  url: string
+): Promise<void> {
+  await Promise.all(
+    folderIds.map((parentId) =>
+      browser.bookmarks.create({ parentId, title, url, type: "bookmark" })
+    )
+  );
 }

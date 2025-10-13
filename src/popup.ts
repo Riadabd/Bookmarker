@@ -22,9 +22,6 @@ const saveButton = document.getElementById(
 const removeButton = document.getElementById(
   "remove-bookmark"
 ) as HTMLButtonElement;
-const openFullViewButton = document.getElementById(
-  "open-full-view"
-) as HTMLButtonElement | null;
 
 // Flat lookup table instead of repeatedly traversing the bookmark tree during search.
 const allFolders: FolderEntry[] = [];
@@ -40,22 +37,12 @@ const ROOT_LABELS: Record<string, string> = {
   unfiled_____: "Other Bookmarks",
 };
 
-const VIEW_MODE = new URLSearchParams(window.location.search).get("view");
-const isExpandedView = VIEW_MODE === "expanded";
-
 async function bootstrap(): Promise<void> {
   await populateTabDetails();
   await loadFolders();
   renderResults(allFolders.slice(0, 25));
   wireEvents();
   removeButton.disabled = true; // Removal is not implemented yet, keep UI parity but disabled.
-  if (openFullViewButton) {
-    if (isExpandedView) {
-      openFullViewButton.hidden = true;
-    } else {
-      openFullViewButton.addEventListener("click", openExpandedView);
-    }
-  }
   updateSaveButtonState();
 }
 
@@ -128,18 +115,6 @@ function wireEvents(): void {
   saveButton.addEventListener("click", async () => {
     await saveBookmarks();
   });
-}
-
-function openExpandedView(): void {
-  const url = browser.runtime.getURL("full.html?view=expanded");
-  browser.windows
-    .create({
-      url,
-      type: "popup",
-      width: 520,
-      height: 640,
-    })
-    .catch((error) => console.error("Failed to open expanded view", error));
 }
 
 function filterFolders(query: string): FolderEntry[] {
@@ -247,9 +222,7 @@ async function saveBookmarks(): Promise<void> {
   } catch (error) {
     console.error("Failed to save bookmarks", error);
   } finally {
-    if (isExpandedView) {
-      saveButton.disabled = selectedFolderIds.size === 0;
-    }
+    saveButton.disabled = selectedFolderIds.size === 0;
   }
 }
 

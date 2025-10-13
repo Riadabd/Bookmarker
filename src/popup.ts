@@ -27,6 +27,8 @@ const removeButton = document.getElementById(
 const allFolders: FolderEntry[] = [];
 // Track selections across re-renders so the UI behaves like a multi-select list.
 const selectedFolderIds = new Set<string>();
+// Cache currently rendered folders so keyboard shortcuts can act on the visible list.
+let currentResults: FolderEntry[] = [];
 
 // Provide friendly labels for root containers that report empty titles in the API.
 const ROOT_LABELS: Record<string, string> = {
@@ -114,6 +116,25 @@ function wireEvents(): void {
     updateSaveButtonState();
   });
 
+  searchInput.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    if (currentResults.length === 0) {
+      return;
+    }
+
+    for (const folder of currentResults) {
+      selectedFolderIds.add(folder.id);
+    }
+
+    searchInput.value = "";
+    searchInput.focus();
+    renderResults(allFolders.slice(0, 50));
+  });
+
   saveButton.addEventListener("click", async () => {
     await saveBookmarks();
   });
@@ -126,6 +147,7 @@ function filterFolders(query: string): FolderEntry[] {
 }
 
 function renderResults(folders: FolderEntry[]): void {
+  currentResults = folders;
   resultsList.innerHTML = "";
   if (folders.length === 0) {
     const empty = document.createElement("li");

@@ -42,6 +42,8 @@ async function bootstrap(): Promise<void> {
   await loadFolders();
   renderResults(allFolders.slice(0, 25));
   wireEvents();
+  // Focus the search input so users can immediately search for folders.
+  searchInput.focus();
   removeButton.disabled = true; // Removal is not implemented yet, keep UI parity but disabled.
   updateSaveButtonState();
 }

@@ -5,13 +5,13 @@ A Firefox extension popup that mimics the native bookmark editor while adding a 
 ## Development
 
 1. Install dependencies:
-   ```bash
-   npm install
-   ```
+```bash
+npm install
+```
 2. Build the extension assets:
-   ```bash
-   npm run build
-   ```
+```bash
+npm run build
+```
    Bundled files land in the `dist/` directory alongside the static assets and manifest.
 3. Load the extension in Firefox:
    - Open `about:debugging#/runtime/this-firefox`.

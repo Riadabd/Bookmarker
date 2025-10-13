@@ -27,5 +27,14 @@
       "id": "bookmark-folder-finder@example.com",
       "strict_min_version": "102.0"
     }
+  },
+  "commands": {
+    "_execute_browser_action": {
+      "suggested_key": {
+        "default": "Ctrl+Shift+E",
+        "mac": "Command+Shift+E"
+      },
+      "description": "Open Bookmark Folder Finder and save the current tab"
+    }
   }
 }

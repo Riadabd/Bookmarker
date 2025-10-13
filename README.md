@@ -20,17 +20,24 @@ npm run build
 
 ## Project layout
 
-- `src/` – TypeScript sources compiled to the popup script.
-- `static/` – HTML, CSS, and manifest files that get copied to `dist/` during builds.
-- `scripts/build.js` – Lightweight build step that copies static assets and runs the TypeScript compiler.
+- `src/` – TypeScript sources for the popup and background scripts.
+- `static/` – HTML, CSS, icons, and the source manifest copied directly into the build.
+- `dist/` – Build artifacts produced by `npm run build`, ready to load in Firefox.
+- `scripts/build.js` – Lightweight build script that copies static assets and runs the TypeScript compiler.
 
 ## Current behaviour
 
 - Autofills the bookmark name from the active tab.
 - Searches folders by any portion of their path (e.g. typing `dev/q` matches `Bookmarks Toolbar / Dev / Quick References`).
 - Allows multi-select with checkboxes; each selected folder receives a bookmark on save.
+- Focuses the folder search field as soon as the popup opens so typing can begin immediately.
+- Pressing `Enter` while typing selects every currently visible search result and keeps focus in the input for the next query.
 - Immediately closes the popup after clicking **Save** while a background script writes bookmarks.
 - Keeps the familiar Firefox bookmark editor layout to ease muscle memory.
+
+## Keyboard shortcut
+
+The popup can be opened from any tab with the extension command shortcut: `Ctrl+Shift+E` on Windows/Linux and `Command+Shift+E` on macOS. You can view or remap this shortcut in Firefox via **about:addons → Manage Extension Shortcuts**.
 
 ### Notable limitations
 

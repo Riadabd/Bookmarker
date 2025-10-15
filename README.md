@@ -32,12 +32,13 @@ npm run build
 - Allows multi-select with checkboxes; each selected folder receives a bookmark on save.
 - Focuses the folder search field as soon as the popup opens so typing can begin immediately.
 - Pressing `Enter` while typing selects every currently visible search result and keeps focus in the input for the next query.
+- Highlights folders where the current tab is already bookmarked (pre-checks them, greys the row, and labels “bookmark exists here”).
 - Immediately closes the popup after clicking **Save** while a background script writes bookmarks.
 - Keeps the familiar Firefox bookmark editor layout to ease muscle memory.
 
 ## Keyboard shortcut
 
-The popup can be opened from any tab with the extension command shortcut: `Ctrl+Shift+E` on Windows/Linux and `Command+Shift+E` on macOS. You can view or remap this shortcut in Firefox via **about:addons → Manage Extension Shortcuts**.
+The popup can be opened from any tab with the extension command shortcut: `Ctrl+Alt+Y` on Windows/Linux and `Command+Option+Y` on macOS. You can view or remap this shortcut in Firefox via **about:addons → Manage Extension Shortcuts**.
 
 ### Notable limitations
 

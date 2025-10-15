@@ -27,8 +27,12 @@ const removeButton = document.getElementById(
 const allFolders: FolderEntry[] = [];
 // Track selections across re-renders so the UI behaves like a multi-select list.
 const selectedFolderIds = new Set<string>();
+// Track folders that already contain a bookmark for the active tab.
+const existingBookmarkFolderIds = new Set<string>();
 // Cache currently rendered folders so keyboard shortcuts can act on the visible list.
 let currentResults: FolderEntry[] = [];
+// Capture the active tab url so we can detect existing bookmarks.
+let activeTabUrl: string | undefined;
 
 // Provide friendly labels for root containers that report empty titles in the API.
 const ROOT_LABELS: Record<string, string> = {
@@ -42,6 +46,7 @@ const ROOT_LABELS: Record<string, string> = {
 async function bootstrap(): Promise<void> {
   await populateTabDetails();
   await loadFolders();
+  await discoverExistingBookmarks();
   renderResults(allFolders.slice(0, 25));
   wireEvents();
   // Focus the search input so users can immediately search for folders.
@@ -58,6 +63,9 @@ async function populateTabDetails(): Promise<void> {
     });
     if (activeTab?.title) {
       nameInput.value = activeTab.title;
+    }
+    if (activeTab?.url) {
+      activeTabUrl = activeTab.url;
     }
   } catch (error) {
     console.error("Failed to resolve active tab", error);
@@ -108,6 +116,25 @@ function resolveFolderName(node: BookmarkTreeNode): string {
   return ROOT_LABELS[node.id] ?? "Unnamed folder";
 }
 
+async function discoverExistingBookmarks(): Promise<void> {
+  if (!activeTabUrl) {
+    return;
+  }
+
+  try {
+    console.log(activeTabUrl);
+    const existing = await browser.bookmarks.search({ url: activeTabUrl });
+    for (const bookmark of existing) {
+      if (!bookmark.parentId) {
+        continue;
+      }
+      existingBookmarkFolderIds.add(bookmark.parentId);
+    }
+  } catch (error) {
+    console.error("Failed to detect existing bookmarks", error);
+  }
+}
+
 function wireEvents(): void {
   searchInput.addEventListener("input", () => {
     const query = searchInput.value.trim().toLowerCase();
@@ -130,9 +157,8 @@ function wireEvents(): void {
       selectedFolderIds.add(folder.id);
     }
 
-    searchInput.value = "";
+    renderResults(currentResults);
     searchInput.focus();
-    renderResults(allFolders.slice(0, 50));
   });
 
   saveButton.addEventListener("click", async () => {
@@ -159,16 +185,22 @@ function renderResults(folders: FolderEntry[]): void {
   }
 
   for (const folder of folders) {
+    const isExisting = existingBookmarkFolderIds.has(folder.id);
+    const isSelected = selectedFolderIds.has(folder.id);
+
     const item = document.createElement("li");
     item.className = "folder-list__item";
     item.dataset.folderId = folder.id;
-    if (selectedFolderIds.has(folder.id)) {
+    if (isExisting) {
+      item.classList.add("folder-list__item--existing");
+    }
+    if (isSelected && !isExisting) {
       item.classList.add("folder-list__item--selected");
     }
 
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
-    checkbox.checked = selectedFolderIds.has(folder.id);
+    checkbox.checked = isSelected;
     checkbox.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleSelection(folder.id, checkbox.checked);
@@ -178,22 +210,38 @@ function renderResults(folders: FolderEntry[]): void {
     labelContainer.className = "folder-list__label";
 
     const nameSpan = document.createElement("div");
+    nameSpan.className = "folder-list__name";
     nameSpan.textContent = folder.name;
+
+    const nameRow = document.createElement("div");
+    nameRow.className = "folder-list__name-row";
+    nameRow.appendChild(nameSpan);
+
+    if (isExisting) {
+      const statusSpan = document.createElement("span");
+      statusSpan.className = "folder-list__status";
+      statusSpan.textContent = "Bookmark exists here";
+      nameRow.appendChild(statusSpan);
+    }
 
     const pathSpan = document.createElement("div");
     pathSpan.className = "folder-list__path";
     pathSpan.textContent = folder.path.slice(0, -1).join(" / ") || "Root";
 
-    labelContainer.appendChild(nameSpan);
+    labelContainer.appendChild(nameRow);
     labelContainer.appendChild(pathSpan);
 
     item.appendChild(checkbox);
     item.appendChild(labelContainer);
-    item.addEventListener("click", () => {
-      const isActive = selectedFolderIds.has(folder.id);
-      toggleSelection(folder.id, !isActive);
-      checkbox.checked = !isActive;
-    });
+    if (!isExisting) {
+      item.addEventListener("click", () => {
+        const isActive = selectedFolderIds.has(folder.id);
+        toggleSelection(folder.id, !isActive);
+        checkbox.checked = !isActive;
+      });
+    } else {
+      checkbox.checked = true;
+    }
 
     resultsList.appendChild(item);
   }
@@ -232,6 +280,14 @@ async function saveBookmarks(): Promise<void> {
 
     const title = nameInput.value.trim() || activeTab.title || activeTab.url;
     const targetFolders = Array.from(selectedFolderIds);
+    // const targetFolders = Array.from(selectedFolderIds).filter(
+    //   (folderId) => !existingBookmarkFolderIds.has(folderId)
+    // );
+
+    if (targetFolders.length === 0) {
+      window.close();
+      return;
+    }
 
     await browser.runtime.sendMessage({
       type: "create-bookmarks",
@@ -241,6 +297,10 @@ async function saveBookmarks(): Promise<void> {
         url: activeTab.url,
       },
     });
+
+    for (const folderId of targetFolders) {
+      existingBookmarkFolderIds.add(folderId);
+    }
 
     window.close();
   } catch (error) {

@@ -98,6 +98,10 @@ body {
   transition: background 0.15s ease;
 }
 
+.folder-list__item--existing {
+  background: rgba(255, 255, 255, 0.04);
+}
+
 .folder-list__item:hover {
   background: var(--bg-active-soft);
 }
@@ -107,9 +111,34 @@ body {
   border-left: 3px solid var(--bg-active);
 }
 
+.folder-list__item--existing .folder-list__name {
+  color: var(--text-muted);
+}
+
+.folder-list__item--existing .folder-list__path {
+  color: var(--text-muted);
+}
+
 .folder-list__label {
   display: flex;
   flex-direction: column;
+}
+
+.folder-list__name-row {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.folder-list__name {
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.folder-list__status {
+  font-size: 12px;
+  font-style: italic;
+  color: var(--text-muted);
 }
 
 .folder-list__path {

@@ -122,8 +122,7 @@ async function discoverExistingBookmarks(): Promise<void> {
   }
 
   try {
-    console.log(activeTabUrl);
-    const existing = await browser.bookmarks.search({ url: activeTabUrl });
+    const existing = await findExistingBookmarks(activeTabUrl);
     for (const bookmark of existing) {
       if (!bookmark.parentId) {
         continue;
@@ -133,6 +132,41 @@ async function discoverExistingBookmarks(): Promise<void> {
   } catch (error) {
     console.error("Failed to detect existing bookmarks", error);
   }
+}
+
+async function findExistingBookmarks(url: string): Promise<BookmarkTreeNode[]> {
+  try {
+    // Let the bookmarks API decide whether the string qualifies as a "real" URL.
+    // A local `new URL(url)` check would accept Firefox-internal pages (e.g. `about:addons`)
+    // even though the structured search rejects them, so we intentionally rely on the API.
+    return await browser.bookmarks.search({ url: url });
+  } catch (error) {
+    if (!isInvalidUrlQueryError(error)) {
+      throw error;
+    }
+  }
+  // The fallback only runs for those internal URLs. The string overload accepts them,
+  // so we filter the broader results back down to an exact match to keep behaviour unchanged.
+  const results = await browser.bookmarks.search(url);
+  return results.filter((bookmark) => bookmark.url === url);
+}
+
+function isInvalidUrlQueryError(error: unknown): boolean {
+  if (error instanceof Error) {
+    if (
+      error.name === "TypeError" &&
+      error.message.includes('.url must match the format "url"')
+    ) {
+      return true;
+    }
+  }
+
+  if (!error || typeof error !== "object") {
+    return false;
+  }
+
+  const message = String((error as { message?: unknown }).message ?? "");
+  return message.includes('.url must match the format "url"');
 }
 
 function wireEvents(): void {

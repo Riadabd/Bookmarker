@@ -280,9 +280,6 @@ async function saveBookmarks(): Promise<void> {
 
     const title = nameInput.value.trim() || activeTab.title || activeTab.url;
     const targetFolders = Array.from(selectedFolderIds);
-    // const targetFolders = Array.from(selectedFolderIds).filter(
-    //   (folderId) => !existingBookmarkFolderIds.has(folderId)
-    // );
 
     if (targetFolders.length === 0) {
       window.close();

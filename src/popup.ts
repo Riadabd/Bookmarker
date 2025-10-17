@@ -235,6 +235,8 @@ function renderResults(folders: FolderEntry[]): void {
     const checkbox = document.createElement("input");
     checkbox.type = "checkbox";
     checkbox.checked = isSelected;
+    // Checkbox already flipped its checked state by the time the event fires;
+    // just forward that value without re-reading our selection map.
     checkbox.addEventListener("click", (event) => {
       event.stopPropagation();
       toggleSelection(folder.id, checkbox.checked);
@@ -268,6 +270,7 @@ function renderResults(folders: FolderEntry[]): void {
     item.appendChild(checkbox);
     item.appendChild(labelContainer);
     if (!isExisting) {
+      // Row clicks happen before the checkbox toggles, so we derive the new state manually.
       item.addEventListener("click", () => {
         const isActive = selectedFolderIds.has(folder.id);
         toggleSelection(folder.id, !isActive);

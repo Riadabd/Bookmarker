@@ -239,7 +239,11 @@ function renderResults(folders: FolderEntry[]): void {
     // just forward that value without re-reading our selection map.
     checkbox.addEventListener("click", (event) => {
       event.stopPropagation();
-      toggleSelection(folder.id, checkbox.checked);
+      toggleSelection(
+        event.currentTarget as HTMLLIElement,
+        folder.id,
+        checkbox.checked
+      );
     });
 
     const labelContainer = document.createElement("div");
@@ -271,9 +275,13 @@ function renderResults(folders: FolderEntry[]): void {
     item.appendChild(labelContainer);
     if (!isExisting) {
       // Row clicks happen before the checkbox toggles, so we derive the new state manually.
-      item.addEventListener("click", () => {
+      item.addEventListener("click", (event) => {
         const isActive = selectedFolderIds.has(folder.id);
-        toggleSelection(folder.id, !isActive);
+        toggleSelection(
+          event.currentTarget as HTMLLIElement,
+          folder.id,
+          !isActive
+        );
         checkbox.checked = !isActive;
       });
     } else {
@@ -286,17 +294,17 @@ function renderResults(folders: FolderEntry[]): void {
   updateSaveButtonState();
 }
 
-function toggleSelection(folderId: string, shouldSelect: boolean): void {
+function toggleSelection(
+  listItem: HTMLLIElement,
+  folderId: string,
+  shouldSelect: boolean
+): void {
   if (shouldSelect) {
     selectedFolderIds.add(folderId);
+    listItem.classList.toggle("folder-list__item--selected");
   } else {
     selectedFolderIds.delete(folderId);
   }
-  const query = searchInput.value.trim().toLowerCase();
-  const foldersToRender = query
-    ? filterFolders(query)
-    : allFolders.slice(0, 50);
-  renderResults(foldersToRender);
 }
 
 async function saveBookmarks(): Promise<void> {

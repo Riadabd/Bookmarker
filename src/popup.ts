@@ -301,10 +301,13 @@ function toggleSelection(
 ): void {
   if (shouldSelect) {
     selectedFolderIds.add(folderId);
-    listItem.classList.toggle("folder-list__item--selected");
+    listItem.classList.add("folder-list__item--selected");
   } else {
     selectedFolderIds.delete(folderId);
+    listItem.classList.remove("folder-list__item--selected");
   }
+
+  updateSaveButtonState();
 }
 
 async function saveBookmarks(): Promise<void> {

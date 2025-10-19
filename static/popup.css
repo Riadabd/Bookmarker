@@ -7,7 +7,10 @@
   --border: #48485a;
   --text: #f0f0f8;
   --text-muted: #b3b3c6;
+  --text-disabled: #9ea0b6;
+  --text-hint: #7d7f95;
   --accent: #05d5ff;
+  --accent-soft: rgba(5, 213, 255, 0.18);
   --danger: #ff5f5f;
   font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
 }
@@ -100,6 +103,7 @@ body {
 
 .folder-list__item--existing {
   background: rgba(255, 255, 255, 0.04);
+  border-left: 3px solid transparent;
 }
 
 .folder-list__item:hover {
@@ -112,27 +116,29 @@ body {
 }
 
 .folder-list__item--existing .folder-list__name {
-  color: var(--text-muted);
-}
-
-.folder-list__item--existing .folder-list__path {
-  color: var(--text-muted);
+  color: var(--text-disabled);
+  font-weight: 600;
 }
 
 .folder-list__label {
   display: flex;
   flex-direction: column;
+  flex: 1;
+  min-width: 0;
 }
 
 .folder-list__name-row {
   display: flex;
-  align-items: baseline;
+  align-items: center;
   gap: 6px;
+  width: 100%;
 }
 
 .folder-list__name {
   font-size: 14px;
   font-weight: 500;
+  flex: 1;
+  min-width: 0;
 }
 
 .folder-list__status {
@@ -141,9 +147,29 @@ body {
   color: var(--text-muted);
 }
 
+.folder-list__item--existing .folder-list__status {
+  font-style: italic;
+  font-weight: 600;
+  font-size: 12px;
+  color: var(--accent);
+  background: var(--accent-soft);
+  padding: 2px 8px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-left: auto;
+}
+
 .folder-list__path {
   font-size: 12px;
   color: var(--text-muted);
+}
+
+.folder-list__item--existing .folder-list__path {
+  color: var(--text-hint);
+  font-style: italic;
 }
 
 .dialog__footer {

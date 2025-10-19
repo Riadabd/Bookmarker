@@ -24,10 +24,18 @@ function isCreateBookmarksMessage(
   if (message.type !== "create-bookmarks") {
     return false;
   }
-  return (
-    "payload" in message &&
-    Array.isArray((message as CreateBookmarksMessage).payload.folders)
-  );
+
+  // Guard against malformed messages so the listener never crashes when payload is missing.
+  if (!("payload" in message)) {
+    return false;
+  }
+
+  const payload = (message as CreateBookmarksMessage).payload;
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  return Array.isArray(payload.folders);
 }
 
 browser.runtime.onMessage.addListener((message: RuntimeMessage) => {

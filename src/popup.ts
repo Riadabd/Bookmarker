@@ -240,11 +240,10 @@ function renderResults(folders: FolderEntry[]): void {
     // just forward that value without re-reading our selection map.
     checkbox.addEventListener("click", (event) => {
       event.stopPropagation();
-      toggleSelection(
-        event.currentTarget as HTMLLIElement,
-        folder.id,
-        checkbox.checked
-      );
+      // Event listeners registered above close over `item`, so they can safely pass it
+      // back here even though the handler runs later. Variables created alongside the
+      // listener are also accessible.
+      toggleSelection(item, folder.id, checkbox.checked);
     });
 
     const labelContainer = document.createElement("div");
@@ -278,11 +277,10 @@ function renderResults(folders: FolderEntry[]): void {
       // Row clicks happen before the checkbox toggles, so we derive the new state manually.
       item.addEventListener("click", (event) => {
         const isActive = selectedFolderIds.has(folder.id);
-        toggleSelection(
-          event.currentTarget as HTMLLIElement,
-          folder.id,
-          !isActive
-        );
+        // Event listeners registered above close over `item`, so they can safely pass it
+        // back here even though the handler runs later. Variables created alongside the
+        // listener are also accessible.
+        toggleSelection(item, folder.id, !isActive);
         checkbox.checked = !isActive;
       });
     } else {

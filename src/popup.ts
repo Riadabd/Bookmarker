@@ -203,7 +203,7 @@ function wireEvents(): void {
 
 function filterFolders(query: string): FolderEntry[] {
   return allFolders
-    .filter((folder) => folder.pathLabel.toLowerCase().includes(query))
+    .filter((folder) => folder.name.toLowerCase().includes(query))
     .slice(0, 100);
 }
 

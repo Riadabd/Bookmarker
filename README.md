@@ -38,7 +38,7 @@ npm run build
 
 ## Keyboard shortcut
 
-The popup can be opened from any tab with the extension command shortcut: `Ctrl+Alt+Y` on Windows/Linux and `Command+Option+Y` on macOS. You can view or remap this shortcut in Firefox via **about:addons → Manage Extension Shortcuts**.
+The popup can be opened from any tab with the extension command shortcut: `Ctrl+Alt+E` on Windows/Linux and `Command+Option+E` on macOS. You can view or remap this shortcut in Firefox via **about:addons → Manage Extension Shortcuts**.
 
 ### Notable limitations
 

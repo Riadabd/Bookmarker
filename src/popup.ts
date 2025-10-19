@@ -191,8 +191,9 @@ function wireEvents(): void {
       selectedFolderIds.add(folder.id);
     }
 
-    renderResults(currentResults);
+    searchInput.value = "";
     searchInput.focus();
+    renderResults(allFolders.slice(0, 50));
   });
 
   saveButton.addEventListener("click", async () => {

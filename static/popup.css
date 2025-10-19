@@ -104,10 +104,15 @@ body {
 .folder-list__item--existing {
   background: rgba(255, 255, 255, 0.04);
   border-left: 3px solid transparent;
+  cursor: default;
 }
 
 .folder-list__item:hover {
   background: var(--bg-active-soft);
+}
+
+.folder-list__item--existing:hover {
+  cursor: default;
 }
 
 .folder-list__item--selected {

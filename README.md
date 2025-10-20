@@ -28,7 +28,8 @@ npm run build
 ## Current behaviour
 
 - Autofills the bookmark name from the active tab.
-- Searches folders by any portion of their path (e.g. typing `dev/q` matches `Bookmarks Toolbar / Dev / Quick References`).
+- Searches folders by their name.
+   - An alternative option that can become a setting in the future: Searches folders by any portion of their path (e.g. typing `dev/q` matches `Bookmarks Toolbar / Dev / Quick References`).
 - Allows multi-select with checkboxes; each selected folder receives a bookmark on save.
 - Focuses the folder search field as soon as the popup opens so typing can begin immediately.
 - Pressing `Enter` while typing selects every currently visible search result and keeps focus in the input for the next query.

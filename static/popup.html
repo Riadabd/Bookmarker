@@ -23,13 +23,24 @@
       <section class="field-group">
         <div class="field-group__label">Location</div>
         <div class="search-panel">
-          <input
-            id="folder-search"
-            class="text-input search-panel__input"
-            type="search"
-            placeholder="Search for folders"
-            autocomplete="off"
-          />
+          <div class="search-panel__control">
+            <input
+              id="folder-search"
+              class="text-input search-panel__input"
+              type="search"
+              placeholder="Search for folders"
+              autocomplete="off"
+            />
+            <button
+              id="folder-search-clear"
+              class="icon-button search-panel__clear"
+              type="button"
+              aria-label="Clear folder search"
+              hidden
+            >
+              &times;
+            </button>
+          </div>
           <ul
             id="folder-results"
             class="folder-list"

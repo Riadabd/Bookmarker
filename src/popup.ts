@@ -13,6 +13,9 @@ const nameInput = document.getElementById("bookmark-name") as HTMLInputElement;
 const searchInput = document.getElementById(
   "folder-search"
 ) as HTMLInputElement;
+const searchClearButton = document.getElementById(
+  "folder-search-clear"
+) as HTMLButtonElement;
 const resultsList = document.getElementById(
   "folder-results"
 ) as HTMLUListElement;
@@ -53,6 +56,7 @@ async function bootstrap(): Promise<void> {
   searchInput.focus();
   removeButton.disabled = true; // Removal is not implemented yet, keep UI parity but disabled.
   updateSaveButtonState();
+  updateSearchClearButtonState();
 }
 
 async function populateTabDetails(): Promise<void> {
@@ -174,7 +178,7 @@ function wireEvents(): void {
     const query = searchInput.value.trim().toLowerCase();
     const results = query ? filterFolders(query) : allFolders.slice(0, 50);
     renderResults(results);
-    updateSaveButtonState();
+    updateSearchClearButtonState();
   });
 
   searchInput.addEventListener("keydown", (event) => {
@@ -194,6 +198,18 @@ function wireEvents(): void {
     searchInput.value = "";
     searchInput.focus();
     renderResults(allFolders.slice(0, 50));
+    updateSearchClearButtonState();
+  });
+
+  searchClearButton.addEventListener("click", () => {
+    if (!searchInput.value) {
+      searchInput.focus();
+      return;
+    }
+    searchInput.value = "";
+    renderResults(allFolders.slice(0, 50));
+    updateSearchClearButtonState();
+    searchInput.focus();
   });
 
   saveButton.addEventListener("click", async () => {
@@ -356,6 +372,10 @@ async function saveBookmarks(): Promise<void> {
 
 function updateSaveButtonState(): void {
   saveButton.disabled = selectedFolderIds.size === 0;
+}
+
+function updateSearchClearButtonState(): void {
+  searchClearButton.hidden = searchInput.value.length === 0;
 }
 
 bootstrap().catch((error) => {

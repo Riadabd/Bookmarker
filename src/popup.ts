@@ -6,7 +6,7 @@ type FolderEntry = {
   id: string;
   name: string;
   path: string[];
-  pathLabel: string;
+  searchKey: string;
 };
 
 const nameInput = document.getElementById("bookmark-name") as HTMLInputElement;
@@ -103,7 +103,7 @@ function collectFolders(nodes: BookmarkTreeNode[], trail: string[]): void {
         id: node.id,
         name: label,
         path: nextTrail,
-        pathLabel: nextTrail.join(" / "),
+        searchKey: label.toLowerCase(),
       });
     }
 
@@ -219,7 +219,7 @@ function wireEvents(): void {
 
 function filterFolders(query: string): FolderEntry[] {
   return allFolders
-    .filter((folder) => folder.name.toLowerCase().includes(query))
+    .filter((folder) => folder.searchKey.includes(query))
     .slice(0, 100);
 }
 

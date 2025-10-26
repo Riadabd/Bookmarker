@@ -36,6 +36,17 @@ const existingBookmarkFolderIds = new Set<string>();
 let currentResults: FolderEntry[] = [];
 // Capture the active tab url so we can detect existing bookmarks.
 let activeTabUrl: string | undefined;
+// Cache the mapping between folderId and DOM element to avoid always re-rendering the
+// entire list on input changes.
+type RowElements = {
+  element: HTMLLIElement;
+  checkbox: HTMLInputElement;
+  name: HTMLDivElement;
+  path: HTMLDivElement;
+  status: HTMLSpanElement;
+};
+
+let rowByFolderId: Map<string, RowElements> = new Map<string, RowElements>();
 
 // Provide friendly labels for root containers that report empty titles in the API.
 const ROOT_LABELS: Record<string, string> = {
@@ -223,10 +234,78 @@ function filterFolders(query: string): FolderEntry[] {
     .slice(0, 100);
 }
 
+function buildRow(folder: FolderEntry): RowElements {
+  const item = document.createElement("li");
+  item.className = "folder-list__item";
+  item.dataset.folderId = folder.id;
+
+  const checkbox = document.createElement("input");
+  checkbox.type = "checkbox";
+  checkbox.addEventListener("click", (event) => {
+    event.stopPropagation();
+    const folderId = item.dataset.folderId!;
+    if (existingBookmarkFolderIds.has(folderId)) {
+      event.preventDefault();
+      return;
+    }
+    toggleSelection(item, folderId, checkbox.checked);
+  });
+
+  const labelContainer = document.createElement("div");
+  labelContainer.className = "folder-list__label";
+
+  const nameRow = document.createElement("div");
+  nameRow.className = "folder-list__name-row";
+
+  const nameSpan = document.createElement("div");
+  nameSpan.className = "folder-list__name";
+  nameSpan.textContent = folder.name;
+
+  const statusSpan = document.createElement("span");
+  statusSpan.className = "folder-list__status";
+  statusSpan.textContent = "Bookmark exists here";
+  statusSpan.hidden = true;
+
+  nameRow.appendChild(nameSpan);
+  nameRow.appendChild(statusSpan);
+
+  const pathSpan = document.createElement("div");
+  pathSpan.className = "folder-list__path";
+  pathSpan.textContent = folder.path.slice(0, -1).join(" / ") || "Root";
+
+  labelContainer.appendChild(nameRow);
+  labelContainer.appendChild(pathSpan);
+
+  item.appendChild(checkbox);
+  item.appendChild(labelContainer);
+
+  item.addEventListener("click", () => {
+    const folderId = item.dataset.folderId!;
+    if (existingBookmarkFolderIds.has(folderId)) {
+      return;
+    }
+    const isActive = selectedFolderIds.has(folderId);
+    toggleSelection(item, folderId, !isActive);
+    checkbox.checked = !isActive;
+  });
+
+  return {
+    element: item,
+    checkbox,
+    name: nameSpan,
+    path: pathSpan,
+    status: statusSpan,
+  };
+}
+
 function renderResults(folders: FolderEntry[]): void {
   currentResults = folders;
-  resultsList.innerHTML = "";
+  const newFolderIdSet: Set<string> = new Set(
+    folders.map((folder) => folder.id)
+  );
+
   if (folders.length === 0) {
+    resultsList.innerHTML = "";
     const empty = document.createElement("li");
     empty.className = "empty-state";
     empty.textContent = "No matching folders";
@@ -235,75 +314,63 @@ function renderResults(folders: FolderEntry[]): void {
     return;
   }
 
+  const emptyState = resultsList.querySelector(".empty-state");
+  if (emptyState) {
+    emptyState.remove();
+  }
+
+  // Delete rows no longer in current result
+  for (const li of Array.from(resultsList.children) as HTMLLIElement[]) {
+    const existingFolderId = li.dataset.folderId!; // FolderId is guaranteed to exist.
+    if (!newFolderIdSet.has(existingFolderId)) {
+      li.remove();
+      // TODO: We may want to pin selected folders in between search queries
+      // in case the user wants to select everything first before saving.
+      selectedFolderIds.delete(existingFolderId);
+    }
+  }
+
   for (const folder of folders) {
     const isExisting = existingBookmarkFolderIds.has(folder.id);
     const isSelected = selectedFolderIds.has(folder.id);
 
-    const item = document.createElement("li");
-    item.className = "folder-list__item";
-    item.dataset.folderId = folder.id;
-    if (isExisting) {
-      item.classList.add("folder-list__item--existing");
-    }
-    if (isSelected && !isExisting) {
-      item.classList.add("folder-list__item--selected");
-    }
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = isSelected;
-    // Checkbox already flipped its checked state by the time the event fires;
-    // just forward that value without re-reading our selection map.
-    checkbox.addEventListener("click", (event) => {
-      event.stopPropagation();
-      // Event listeners registered above close over `item`, so they can safely pass it
-      // back here even though the handler runs later. Variables created alongside the
-      // listener are also accessible.
-      toggleSelection(item, folder.id, checkbox.checked);
-    });
-
-    const labelContainer = document.createElement("div");
-    labelContainer.className = "folder-list__label";
-
-    const nameSpan = document.createElement("div");
-    nameSpan.className = "folder-list__name";
-    nameSpan.textContent = folder.name;
-
-    const nameRow = document.createElement("div");
-    nameRow.className = "folder-list__name-row";
-    nameRow.appendChild(nameSpan);
-
-    if (isExisting) {
-      const statusSpan = document.createElement("span");
-      statusSpan.className = "folder-list__status";
-      statusSpan.textContent = "Bookmark exists here";
-      nameRow.appendChild(statusSpan);
-    }
-
-    const pathSpan = document.createElement("div");
-    pathSpan.className = "folder-list__path";
-    pathSpan.textContent = folder.path.slice(0, -1).join(" / ") || "Root";
-
-    labelContainer.appendChild(nameRow);
-    labelContainer.appendChild(pathSpan);
-
-    item.appendChild(checkbox);
-    item.appendChild(labelContainer);
-    if (!isExisting) {
-      // Row clicks happen before the checkbox toggles, so we derive the new state manually.
-      item.addEventListener("click", (event) => {
-        const isActive = selectedFolderIds.has(folder.id);
-        // Event listeners registered above close over `item`, so they can safely pass it
-        // back here even though the handler runs later. Variables created alongside the
-        // listener are also accessible.
-        toggleSelection(item, folder.id, !isActive);
-        checkbox.checked = !isActive;
-      });
+    let row: RowElements;
+    if (rowByFolderId.has(folder.id)) {
+      row = rowByFolderId.get(folder.id)!;
     } else {
-      checkbox.checked = true;
+      row = buildRow(folder);
+      rowByFolderId.set(folder.id, row);
     }
 
-    resultsList.appendChild(item);
+    const { element, checkbox, status, name, path } = row;
+
+    element.dataset.folderId = folder.id;
+    element.classList.toggle("folder-list__item--existing", isExisting);
+    element.classList.toggle(
+      "folder-list__item--selected",
+      isSelected && !isExisting
+    );
+
+    checkbox.disabled = isExisting;
+
+    if (isExisting) {
+      checkbox.checked = true;
+    } else {
+      checkbox.checked = isSelected;
+    }
+
+    status.hidden = !isExisting;
+
+    if (name.textContent !== folder.name) {
+      name.textContent = folder.name;
+    }
+
+    const nextPath = folder.path.slice(0, -1).join(" / ") || "Root";
+    if (path.textContent !== nextPath) {
+      path.textContent = nextPath;
+    }
+
+    resultsList.appendChild(element);
   }
 
   updateSaveButtonState();

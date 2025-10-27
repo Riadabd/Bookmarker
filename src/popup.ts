@@ -47,6 +47,8 @@ type RowElements = {
 };
 
 let rowByFolderId: Map<string, RowElements> = new Map<string, RowElements>();
+let pendingRender: FolderEntry[] | null = null;
+let renderScheduled = false;
 
 // Provide friendly labels for root containers that report empty titles in the API.
 const ROOT_LABELS: Record<string, string> = {
@@ -299,7 +301,26 @@ function buildRow(folder: FolderEntry): RowElements {
 }
 
 function renderResults(folders: FolderEntry[]): void {
+  // Coalesce rapid updates and let the browser flush once per frame.
   currentResults = folders;
+  pendingRender = folders;
+  if (renderScheduled) {
+    return;
+  }
+
+  renderScheduled = true;
+  window.requestAnimationFrame(() => {
+    renderScheduled = false;
+    const next = pendingRender;
+    pendingRender = null;
+    if (!next) {
+      return;
+    }
+    commitRender(next);
+  });
+}
+
+function commitRender(folders: FolderEntry[]): void {
   const newFolderIdSet: Set<string> = new Set(
     folders.map((folder) => folder.id)
   );

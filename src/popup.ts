@@ -348,6 +348,8 @@ function commitRender(folders: FolderEntry[]): void {
     }
   }
 
+  const elements: HTMLLIElement[] = [];
+
   for (const folder of folders) {
     const isExisting = existingBookmarkFolderIds.has(folder.id);
     const isSelected = selectedFolderIds.has(folder.id);
@@ -388,8 +390,10 @@ function commitRender(folders: FolderEntry[]): void {
       path.textContent = nextPath;
     }
 
-    resultsList.appendChild(element);
+    elements.push(element);
   }
+
+  resultsList.append(...elements);
 
   updateSaveButtonState();
 }

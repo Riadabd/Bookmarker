@@ -345,9 +345,6 @@ function commitRender(folders: FolderEntry[]): void {
     const existingFolderId = li.dataset.folderId!; // FolderId is guaranteed to exist.
     if (!newFolderIdSet.has(existingFolderId)) {
       li.remove();
-      // TODO: We may want to pin selected folders in between search queries
-      // in case the user wants to select everything first before saving.
-      selectedFolderIds.delete(existingFolderId);
     }
   }
 

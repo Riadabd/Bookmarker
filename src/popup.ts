@@ -25,6 +25,7 @@ const saveButton = document.getElementById(
 const removeButton = document.getElementById(
   "remove-bookmark"
 ) as HTMLButtonElement;
+// Elements powering the inline create-folder sheet, kept alongside the primary picker nodes.
 const createFolderTrigger = document.getElementById(
   "create-folder-trigger"
 ) as HTMLButtonElement;
@@ -62,6 +63,7 @@ const selectedFolderIds = new Set<string>();
 const existingBookmarkFolderIds = new Set<string>();
 // Cache currently rendered folders so keyboard shortcuts can act on the visible list.
 let currentResults: FolderEntry[] = [];
+// Maintain a lightweight cache for the parent picker list so we can re-render without re-filtering.
 let parentResults: FolderEntry[] = [];
 // Capture the active tab url so we can detect existing bookmarks.
 let activeTabUrl: string | undefined;
@@ -78,6 +80,7 @@ type RowElements = {
 let rowByFolderId: Map<string, RowElements> = new Map<string, RowElements>();
 let pendingRender: FolderEntry[] | null = null;
 let renderScheduled = false;
+// Remember which parent folder is currently chosen in the create-folder sheet.
 let selectedParentId: string | null = null;
 
 // Provide friendly labels for root containers that report empty titles in the API.
@@ -263,6 +266,7 @@ function wireEvents(): void {
 
   createFolderTrigger.setAttribute("aria-expanded", "false");
 
+  // Toggle the sheet open/closed without leaving the popup context.
   createFolderTrigger.addEventListener("click", () => {
     if (createFolderSheet.hidden) {
       openCreateFolderSheet();
@@ -277,6 +281,7 @@ function wireEvents(): void {
     searchInput.focus();
   });
 
+  // Keep the parent picker results in sync with the free-text filter.
   createFolderParentSearch.addEventListener("input", () => {
     const query = createFolderParentSearch.value.trim().toLowerCase();
     const results = query
@@ -286,6 +291,7 @@ function wireEvents(): void {
     updateParentClearButtonState();
   });
 
+  // Allow pressing Enter to accept the first visible parent result without leaving the field.
   createFolderParentSearch.addEventListener("keydown", (event) => {
     if (event.key !== "Enter") {
       return;
@@ -300,6 +306,7 @@ function wireEvents(): void {
     }
   });
 
+  // Mirror the main search clear affordance for the parent picker.
   createFolderParentClear.addEventListener("click", () => {
     if (!createFolderParentSearch.value) {
       createFolderParentSearch.focus();
@@ -311,6 +318,7 @@ function wireEvents(): void {
     createFolderParentSearch.focus();
   });
 
+  // Submit the inline form to spawn the folder via the background script.
   createFolderForm.addEventListener("submit", async (event) => {
     event.preventDefault();
     await handleCreateFolderSubmit();
@@ -498,6 +506,7 @@ function openCreateFolderSheet(): void {
   createFolderParentSearch.value = "";
   createFolderSheet.hidden = false;
   createFolderTrigger.setAttribute("aria-expanded", "true");
+  // Pre-populate the parent picker with the same default slice used in the main list.
   renderParentResults(initialResults);
   updateParentClearButtonState();
   updateCreateFolderSubmitState();
@@ -508,6 +517,7 @@ function openCreateFolderSheet(): void {
 }
 
 function closeCreateFolderSheet(): void {
+  // Collapse the sheet and clear all transient state so the next open starts fresh.
   createFolderSheet.hidden = true;
   createFolderTrigger.setAttribute("aria-expanded", "false");
   createFolderForm.reset();
@@ -547,6 +557,7 @@ function buildParentRow(folder: FolderEntry): HTMLLIElement {
   radio.type = "radio";
   radio.name = "create-folder-parent";
   radio.checked = folder.id === selectedParentId;
+  // Keep the radio change local so the list item click handler can still toggle selection.
   radio.addEventListener("click", (event) => {
     event.stopPropagation();
     setSelectedParent(folder.id);
@@ -577,6 +588,7 @@ function buildParentRow(folder: FolderEntry): HTMLLIElement {
     item.classList.add("folder-list__item--selected");
   }
 
+  // Clicking anywhere on the row mirrors the native dialog by selecting the radio option.
   item.addEventListener("click", () => {
     setSelectedParent(folder.id);
   });
@@ -597,10 +609,12 @@ function setSelectedParent(folderId: string): void {
 }
 
 function updateParentClearButtonState(): void {
+  // Show the clear icon only when there is text to clear.
   createFolderParentClear.hidden = createFolderParentSearch.value.length === 0;
 }
 
 function updateCreateFolderSubmitState(): void {
+  // Users must explicitly pick a parent; without one, the create call would fail.
   createFolderSubmitButton.disabled = !selectedParentId;
 }
 
@@ -648,14 +662,17 @@ async function handleCreateFolderSubmit(): Promise<void> {
       ? allFolders.findIndex((entry) => entry.id === parentEntry.id)
       : -1;
     if (parentIndex >= 0) {
+      // Insert immediately after the parent to keep the flat list roughly grouped together.
       allFolders.splice(parentIndex + 1, 0, newEntry);
     } else {
+      // As a fallback, surface the new folder near the top so it is immediately discoverable.
       allFolders.unshift(newEntry);
     }
     folderLookup.set(newEntry.id, newEntry);
 
     selectedFolderIds.add(newEntry.id);
 
+    // Merge the freshly created folder into the current render so the user can confirm the save.
     const refreshedResults = [
       newEntry,
       ...currentResults.filter((folder) => folder.id !== newEntry.id),

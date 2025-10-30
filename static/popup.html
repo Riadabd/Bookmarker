@@ -21,7 +21,84 @@
         />
       </section>
       <section class="field-group">
-        <div class="field-group__label">Location</div>
+        <div class="field-group__header">
+          <div class="field-group__label">Location</div>
+          <button
+            id="create-folder-trigger"
+            class="button button--subtle button--small"
+            type="button"
+          >
+            New folder…
+          </button>
+        </div>
+        <div
+          id="create-folder-sheet"
+          class="create-folder"
+          hidden
+        >
+          <form id="create-folder-form" class="create-folder__form">
+            <section class="create-folder__row">
+              <label class="field-group__label" for="create-folder-name">
+                Folder name
+              </label>
+              <input
+                id="create-folder-name"
+                class="text-input"
+                type="text"
+                placeholder="New folder"
+                autocomplete="off"
+                required
+              />
+            </section>
+            <section class="create-folder__row">
+              <label class="field-group__label" for="create-folder-parent-search">
+                Parent folder
+              </label>
+              <div class="search-panel create-folder__parent">
+                <div class="search-panel__control">
+                  <input
+                    id="create-folder-parent-search"
+                    class="text-input search-panel__input"
+                    type="search"
+                    placeholder="Search parent folders"
+                    autocomplete="off"
+                  />
+                  <button
+                    id="create-folder-parent-clear"
+                    class="icon-button search-panel__clear"
+                    type="button"
+                    aria-label="Clear parent folder search"
+                    hidden
+                  >
+                    &times;
+                  </button>
+                </div>
+                <ul
+                  id="create-folder-parent-results"
+                  class="folder-list folder-list--parent"
+                  role="listbox"
+                  aria-label="Parent folders"
+                ></ul>
+              </div>
+            </section>
+            <div class="create-folder__actions">
+              <button
+                id="create-folder-cancel"
+                class="button button--ghost"
+                type="button"
+              >
+                Cancel
+              </button>
+              <button
+                id="create-folder-submit"
+                class="button button--primary"
+                type="submit"
+              >
+                Create folder
+              </button>
+            </div>
+          </form>
+        </div>
         <div class="search-panel">
           <div class="search-panel__control">
             <input

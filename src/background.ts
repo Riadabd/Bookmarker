@@ -1,5 +1,7 @@
 /// <reference types="firefox-webext-browser" />
 
+type BookmarkNode = browser.bookmarks.BookmarkTreeNode;
+
 type CreateBookmarksMessage = {
   type: "create-bookmarks";
   payload: {
@@ -9,8 +11,17 @@ type CreateBookmarksMessage = {
   };
 };
 
+type CreateFolderMessage = {
+  type: "create-folder";
+  payload: {
+    parentId: string;
+    title: string;
+  };
+};
+
 type RuntimeMessage =
   | CreateBookmarksMessage
+  | CreateFolderMessage
   | { type: string }
   | undefined
   | null;
@@ -38,21 +49,59 @@ function isCreateBookmarksMessage(
   return Array.isArray(payload.folders);
 }
 
+function isCreateFolderMessage(
+  message: RuntimeMessage
+): message is CreateFolderMessage {
+  if (!message || typeof message !== "object") {
+    return false;
+  }
+  if (message.type !== "create-folder") {
+    return false;
+  }
+
+  if (!("payload" in message)) {
+    return false;
+  }
+
+  const payload = (message as CreateFolderMessage).payload;
+  if (!payload || typeof payload !== "object") {
+    return false;
+  }
+
+  return (
+    typeof payload.parentId === "string" &&
+    payload.parentId.length > 0 &&
+    typeof payload.title === "string"
+  );
+}
+
 browser.runtime.onMessage.addListener((message: RuntimeMessage) => {
-  if (!isCreateBookmarksMessage(message)) {
-    return undefined;
+  if (isCreateBookmarksMessage(message)) {
+    const { folders, title, url } = message.payload;
+    if (!folders?.length || !url) {
+      return undefined;
+    }
+
+    // Perform the writes asynchronously so the popup can close without waiting.
+    return createBookmarks(folders, title, url).catch((error) => {
+      console.error("Failed to create bookmarks", error);
+      throw error;
+    });
   }
 
-  const { folders, title, url } = message.payload;
-  if (!folders?.length || !url) {
-    return undefined;
+  if (isCreateFolderMessage(message)) {
+    const { parentId, title } = message.payload;
+    if (!parentId || !title) {
+      return undefined;
+    }
+
+    return createFolder(parentId, title).catch((error) => {
+      console.error("Failed to create folder", error);
+      throw error;
+    });
   }
 
-  // Perform the writes asynchronously so the popup can close without waiting.
-  return createBookmarks(folders, title, url).catch((error) => {
-    console.error("Failed to create bookmarks", error);
-    throw error;
-  });
+  return undefined;
 });
 
 async function createBookmarks(
@@ -65,4 +114,11 @@ async function createBookmarks(
       browser.bookmarks.create({ parentId, title, url, type: "bookmark" })
     )
   );
+}
+
+async function createFolder(
+  parentId: string,
+  title: string
+): Promise<BookmarkNode> {
+  return browser.bookmarks.create({ parentId, title, type: "folder" });
 }

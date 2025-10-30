@@ -25,15 +25,44 @@ const saveButton = document.getElementById(
 const removeButton = document.getElementById(
   "remove-bookmark"
 ) as HTMLButtonElement;
+const createFolderTrigger = document.getElementById(
+  "create-folder-trigger"
+) as HTMLButtonElement;
+const createFolderSheet = document.getElementById(
+  "create-folder-sheet"
+) as HTMLDivElement;
+const createFolderForm = document.getElementById(
+  "create-folder-form"
+) as HTMLFormElement;
+const createFolderNameInput = document.getElementById(
+  "create-folder-name"
+) as HTMLInputElement;
+const createFolderParentSearch = document.getElementById(
+  "create-folder-parent-search"
+) as HTMLInputElement;
+const createFolderParentClear = document.getElementById(
+  "create-folder-parent-clear"
+) as HTMLButtonElement;
+const createFolderParentResults = document.getElementById(
+  "create-folder-parent-results"
+) as HTMLUListElement;
+const createFolderCancelButton = document.getElementById(
+  "create-folder-cancel"
+) as HTMLButtonElement;
+const createFolderSubmitButton = document.getElementById(
+  "create-folder-submit"
+) as HTMLButtonElement;
 
 // Flat lookup table instead of repeatedly traversing the bookmark tree during search.
 const allFolders: FolderEntry[] = [];
+const folderLookup = new Map<string, FolderEntry>();
 // Track selections across re-renders so the UI behaves like a multi-select list.
 const selectedFolderIds = new Set<string>();
 // Track folders that already contain a bookmark for the active tab.
 const existingBookmarkFolderIds = new Set<string>();
 // Cache currently rendered folders so keyboard shortcuts can act on the visible list.
 let currentResults: FolderEntry[] = [];
+let parentResults: FolderEntry[] = [];
 // Capture the active tab url so we can detect existing bookmarks.
 let activeTabUrl: string | undefined;
 // Cache the mapping between folderId and DOM element to avoid always re-rendering the
@@ -49,6 +78,7 @@ type RowElements = {
 let rowByFolderId: Map<string, RowElements> = new Map<string, RowElements>();
 let pendingRender: FolderEntry[] | null = null;
 let renderScheduled = false;
+let selectedParentId: string | null = null;
 
 // Provide friendly labels for root containers that report empty titles in the API.
 const ROOT_LABELS: Record<string, string> = {
@@ -112,12 +142,14 @@ function collectFolders(nodes: BookmarkTreeNode[], trail: string[]): void {
     const nextTrail = [...trail, label];
 
     if (node.id !== "root________") {
-      allFolders.push({
+      const entry: FolderEntry = {
         id: node.id,
         name: label,
         path: nextTrail,
         searchKey: label.toLowerCase(),
-      });
+      };
+      allFolders.push(entry);
+      folderLookup.set(node.id, entry);
     }
 
     if (node.children) {
@@ -228,12 +260,71 @@ function wireEvents(): void {
   saveButton.addEventListener("click", async () => {
     await saveBookmarks();
   });
+
+  createFolderTrigger.setAttribute("aria-expanded", "false");
+
+  createFolderTrigger.addEventListener("click", () => {
+    if (createFolderSheet.hidden) {
+      openCreateFolderSheet();
+    } else {
+      closeCreateFolderSheet();
+      searchInput.focus();
+    }
+  });
+
+  createFolderCancelButton.addEventListener("click", () => {
+    closeCreateFolderSheet();
+    searchInput.focus();
+  });
+
+  createFolderParentSearch.addEventListener("input", () => {
+    const query = createFolderParentSearch.value.trim().toLowerCase();
+    const results = query
+      ? filterFolders(query)
+      : allFolders.slice(0, 50);
+    renderParentResults(results.slice(0, 50));
+    updateParentClearButtonState();
+  });
+
+  createFolderParentSearch.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+    event.preventDefault();
+    if (parentResults.length === 0) {
+      return;
+    }
+    const [first] = parentResults;
+    if (first) {
+      setSelectedParent(first.id);
+    }
+  });
+
+  createFolderParentClear.addEventListener("click", () => {
+    if (!createFolderParentSearch.value) {
+      createFolderParentSearch.focus();
+      return;
+    }
+    createFolderParentSearch.value = "";
+    renderParentResults(allFolders.slice(0, 50));
+    updateParentClearButtonState();
+    createFolderParentSearch.focus();
+  });
+
+  createFolderForm.addEventListener("submit", async (event) => {
+    event.preventDefault();
+    await handleCreateFolderSubmit();
+  });
 }
 
 function filterFolders(query: string): FolderEntry[] {
   return allFolders
     .filter((folder) => folder.searchKey.includes(query))
     .slice(0, 100);
+}
+
+function formatFolderPath(folder: FolderEntry): string {
+  return folder.path.slice(0, -1).join(" / ") || "Root";
 }
 
 function buildRow(folder: FolderEntry): RowElements {
@@ -273,7 +364,7 @@ function buildRow(folder: FolderEntry): RowElements {
 
   const pathSpan = document.createElement("div");
   pathSpan.className = "folder-list__path";
-  pathSpan.textContent = folder.path.slice(0, -1).join(" / ") || "Root";
+  pathSpan.textContent = formatFolderPath(folder);
 
   labelContainer.appendChild(nameRow);
   labelContainer.appendChild(pathSpan);
@@ -385,7 +476,7 @@ function commitRender(folders: FolderEntry[]): void {
       name.textContent = folder.name;
     }
 
-    const nextPath = folder.path.slice(0, -1).join(" / ") || "Root";
+    const nextPath = formatFolderPath(folder);
     if (path.textContent !== nextPath) {
       path.textContent = nextPath;
     }
@@ -396,6 +487,192 @@ function commitRender(folders: FolderEntry[]): void {
   resultsList.append(...elements);
 
   updateSaveButtonState();
+}
+
+function openCreateFolderSheet(): void {
+  selectedParentId = null;
+
+  const initialResults = allFolders.slice(0, 50);
+
+  createFolderNameInput.value = "";
+  createFolderParentSearch.value = "";
+  createFolderSheet.hidden = false;
+  createFolderTrigger.setAttribute("aria-expanded", "true");
+  renderParentResults(initialResults);
+  updateParentClearButtonState();
+  updateCreateFolderSubmitState();
+
+  window.requestAnimationFrame(() => {
+    createFolderNameInput.focus();
+  });
+}
+
+function closeCreateFolderSheet(): void {
+  createFolderSheet.hidden = true;
+  createFolderTrigger.setAttribute("aria-expanded", "false");
+  createFolderForm.reset();
+  selectedParentId = null;
+  parentResults = [];
+  createFolderParentResults.innerHTML = "";
+  updateParentClearButtonState();
+  createFolderSubmitButton.disabled = false;
+}
+
+function renderParentResults(folders: FolderEntry[]): void {
+  const limited = folders.slice(0, 50);
+  parentResults = limited;
+
+  createFolderParentResults.innerHTML = "";
+
+  if (limited.length === 0) {
+    const empty = document.createElement("li");
+    empty.className = "empty-state";
+    empty.textContent = "No parent matches";
+    createFolderParentResults.appendChild(empty);
+    return;
+  }
+
+  for (const folder of limited) {
+    const row = buildParentRow(folder);
+    createFolderParentResults.appendChild(row);
+  }
+}
+
+function buildParentRow(folder: FolderEntry): HTMLLIElement {
+  const item = document.createElement("li");
+  item.className = "folder-list__item";
+  item.dataset.folderId = folder.id;
+
+  const radio = document.createElement("input");
+  radio.type = "radio";
+  radio.name = "create-folder-parent";
+  radio.checked = folder.id === selectedParentId;
+  radio.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setSelectedParent(folder.id);
+  });
+
+  const labelContainer = document.createElement("div");
+  labelContainer.className = "folder-list__label";
+
+  const nameRow = document.createElement("div");
+  nameRow.className = "folder-list__name-row";
+
+  const nameSpan = document.createElement("div");
+  nameSpan.className = "folder-list__name";
+  nameSpan.textContent = folder.name;
+
+  const pathSpan = document.createElement("div");
+  pathSpan.className = "folder-list__path";
+  pathSpan.textContent = formatFolderPath(folder);
+
+  nameRow.appendChild(nameSpan);
+  labelContainer.appendChild(nameRow);
+  labelContainer.appendChild(pathSpan);
+
+  item.appendChild(radio);
+  item.appendChild(labelContainer);
+
+  if (folder.id === selectedParentId) {
+    item.classList.add("folder-list__item--selected");
+  }
+
+  item.addEventListener("click", () => {
+    setSelectedParent(folder.id);
+  });
+
+  return item;
+}
+
+function setSelectedParent(folderId: string): void {
+  if (selectedParentId === folderId) {
+    return;
+  }
+  selectedParentId = folderId;
+  if (!folderLookup.has(folderId)) {
+    return;
+  }
+  renderParentResults(parentResults);
+  updateCreateFolderSubmitState();
+}
+
+function updateParentClearButtonState(): void {
+  createFolderParentClear.hidden = createFolderParentSearch.value.length === 0;
+}
+
+function updateCreateFolderSubmitState(): void {
+  createFolderSubmitButton.disabled = !selectedParentId;
+}
+
+async function handleCreateFolderSubmit(): Promise<void> {
+  const name = createFolderNameInput.value.trim();
+  if (!name) {
+    createFolderNameInput.focus();
+    return;
+  }
+
+  const parentId = selectedParentId;
+  if (!parentId) {
+    console.error("Missing parent folder for new folder creation");
+    createFolderParentSearch.focus();
+    return;
+  }
+
+  createFolderSubmitButton.disabled = true;
+
+  try {
+    const created = (await browser.runtime.sendMessage({
+      type: "create-folder",
+      payload: {
+        parentId,
+        title: name,
+      },
+    })) as BookmarkTreeNode | undefined;
+
+    if (!created || !created.id) {
+      throw new Error("Background did not return created folder");
+    }
+
+    const createdName = created.title?.trim() || name;
+    const parentEntry = folderLookup.get(parentId);
+    const parentPath = parentEntry ? [...parentEntry.path] : [];
+
+    const newEntry: FolderEntry = {
+      id: created.id,
+      name: createdName,
+      path: [...parentPath, createdName],
+      searchKey: createdName.toLowerCase(),
+    };
+
+    const parentIndex = parentEntry
+      ? allFolders.findIndex((entry) => entry.id === parentEntry.id)
+      : -1;
+    if (parentIndex >= 0) {
+      allFolders.splice(parentIndex + 1, 0, newEntry);
+    } else {
+      allFolders.unshift(newEntry);
+    }
+    folderLookup.set(newEntry.id, newEntry);
+
+    selectedFolderIds.add(newEntry.id);
+
+    const refreshedResults = [
+      newEntry,
+      ...currentResults.filter((folder) => folder.id !== newEntry.id),
+    ].slice(0, 50);
+
+    renderResults(refreshedResults);
+
+    closeCreateFolderSheet();
+    searchInput.value = "";
+    updateSearchClearButtonState();
+    updateSaveButtonState();
+    searchInput.focus();
+  } catch (error) {
+    console.error("Failed to create folder", error);
+  } finally {
+    createFolderSubmitButton.disabled = false;
+  }
 }
 
 function toggleSelection(

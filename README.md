@@ -39,7 +39,22 @@ npm run build
 
 ## Keyboard shortcut
 
-The popup can be opened from any tab with the extension command shortcut: `Ctrl+Alt+E` on Windows/Linux and `Command+Option+E` on macOS. You can view or remap this shortcut in Firefox via **about:addons → Manage Extension Shortcuts**.
+The popup can be opened from any tab with the extension command shortcut: `Ctrl+Shift+E` on Windows/Linux and `Command+Shift+E` on macOS. You can view or remap this shortcut in Firefox via **about:addons → Manage Extension Shortcuts**.
+
+## Firefox Add-ons (AMO) submission checklist
+
+- Build a fresh `dist/` bundle with:
+```bash
+npm run build
+```
+- Validate types before publishing:
+```bash
+npm run type-check
+```
+- Run Mozilla's extension validator in `dist/`:
+```bash
+npx web-ext lint -s dist
+```
 
 ### Notable limitations
 

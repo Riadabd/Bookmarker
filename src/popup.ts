@@ -9,50 +9,83 @@ type FolderEntry = {
   searchKey: string;
 };
 
-const nameInput = document.getElementById("bookmark-name") as HTMLInputElement;
-const searchInput = document.getElementById(
-  "folder-search"
-) as HTMLInputElement;
-const searchClearButton = document.getElementById(
-  "folder-search-clear"
-) as HTMLButtonElement;
-const resultsList = document.getElementById(
-  "folder-results"
-) as HTMLUListElement;
-const saveButton = document.getElementById(
-  "save-bookmark"
-) as HTMLButtonElement;
-const removeButton = document.getElementById(
-  "remove-bookmark"
-) as HTMLButtonElement;
+type ElementConstructor<T extends HTMLElement> = {
+  new (): T;
+};
+
+function getRequiredElement<T extends HTMLElement>(
+  id: string,
+  expectedType: ElementConstructor<T>
+): T {
+  const element: HTMLElement | null = document.getElementById(id);
+  if (!(element instanceof expectedType)) {
+    throw new Error(`Expected ${expectedType.name} for #${id}`);
+  }
+
+  return element;
+}
+
+const nameInput: HTMLInputElement = getRequiredElement(
+  "bookmark-name",
+  HTMLInputElement
+);
+const searchInput: HTMLInputElement = getRequiredElement(
+  "folder-search",
+  HTMLInputElement
+);
+const searchClearButton: HTMLButtonElement = getRequiredElement(
+  "folder-search-clear",
+  HTMLButtonElement
+);
+const resultsList: HTMLUListElement = getRequiredElement(
+  "folder-results",
+  HTMLUListElement
+);
+const saveButton: HTMLButtonElement = getRequiredElement(
+  "save-bookmark",
+  HTMLButtonElement
+);
+const removeButton: HTMLButtonElement = getRequiredElement(
+  "remove-bookmark",
+  HTMLButtonElement
+);
 // Elements powering the inline create-folder sheet, kept alongside the primary picker nodes.
-const createFolderTrigger = document.getElementById(
-  "create-folder-trigger"
-) as HTMLButtonElement;
-const createFolderSheet = document.getElementById(
-  "create-folder-sheet"
-) as HTMLDivElement;
-const createFolderForm = document.getElementById(
-  "create-folder-form"
-) as HTMLFormElement;
-const createFolderNameInput = document.getElementById(
-  "create-folder-name"
-) as HTMLInputElement;
-const createFolderParentSearch = document.getElementById(
-  "create-folder-parent-search"
-) as HTMLInputElement;
-const createFolderParentClear = document.getElementById(
-  "create-folder-parent-clear"
-) as HTMLButtonElement;
-const createFolderParentResults = document.getElementById(
-  "create-folder-parent-results"
-) as HTMLUListElement;
-const createFolderCancelButton = document.getElementById(
-  "create-folder-cancel"
-) as HTMLButtonElement;
-const createFolderSubmitButton = document.getElementById(
-  "create-folder-submit"
-) as HTMLButtonElement;
+const createFolderTrigger: HTMLButtonElement = getRequiredElement(
+  "create-folder-trigger",
+  HTMLButtonElement
+);
+const createFolderSheet: HTMLDivElement = getRequiredElement(
+  "create-folder-sheet",
+  HTMLDivElement
+);
+const createFolderForm: HTMLFormElement = getRequiredElement(
+  "create-folder-form",
+  HTMLFormElement
+);
+const createFolderNameInput: HTMLInputElement = getRequiredElement(
+  "create-folder-name",
+  HTMLInputElement
+);
+const createFolderParentSearch: HTMLInputElement = getRequiredElement(
+  "create-folder-parent-search",
+  HTMLInputElement
+);
+const createFolderParentClear: HTMLButtonElement = getRequiredElement(
+  "create-folder-parent-clear",
+  HTMLButtonElement
+);
+const createFolderParentResults: HTMLUListElement = getRequiredElement(
+  "create-folder-parent-results",
+  HTMLUListElement
+);
+const createFolderCancelButton: HTMLButtonElement = getRequiredElement(
+  "create-folder-cancel",
+  HTMLButtonElement
+);
+const createFolderSubmitButton: HTMLButtonElement = getRequiredElement(
+  "create-folder-submit",
+  HTMLButtonElement
+);
 
 // Flat lookup table instead of repeatedly traversing the bookmark tree during search.
 const allFolders: FolderEntry[] = [];
@@ -92,6 +125,14 @@ const ROOT_LABELS: Record<string, string> = {
   unfiled_____: "Other Bookmarks",
 };
 
+function isPopupRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null;
+}
+
+function isBookmarkTreeNode(value: unknown): value is BookmarkTreeNode {
+  return isPopupRecord(value) && typeof value.id === "string";
+}
+
 async function bootstrap(): Promise<void> {
   await populateTabDetails();
   await loadFolders();
@@ -117,7 +158,7 @@ async function populateTabDetails(): Promise<void> {
     if (activeTab?.url) {
       activeTabUrl = activeTab.url;
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to resolve active tab", error);
   }
 }
@@ -130,7 +171,7 @@ async function loadFolders(): Promise<void> {
         collectFolders(node.children, []);
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to read bookmarks", error);
   }
 }
@@ -181,7 +222,7 @@ async function discoverExistingBookmarks(): Promise<void> {
       }
       existingBookmarkFolderIds.add(bookmark.parentId);
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to detect existing bookmarks", error);
   }
 }
@@ -192,7 +233,7 @@ async function findExistingBookmarks(url: string): Promise<BookmarkTreeNode[]> {
     // A local `new URL(url)` check would accept Firefox-internal pages (e.g. `about:addons`)
     // even though the structured search rejects them, so we intentionally rely on the API.
     return await browser.bookmarks.search({ url: url });
-  } catch (error) {
+  } catch (error: unknown) {
     if (!isInvalidUrlQueryError(error)) {
       throw error;
     }
@@ -213,11 +254,11 @@ function isInvalidUrlQueryError(error: unknown): boolean {
     }
   }
 
-  if (!error || typeof error !== "object") {
+  if (!isPopupRecord(error) || !("message" in error)) {
     return false;
   }
 
-  const message = String((error as { message?: unknown }).message ?? "");
+  const message = String(error.message ?? "");
   return message.includes('.url must match the format "url"');
 }
 
@@ -229,7 +270,7 @@ function wireEvents(): void {
     updateSearchClearButtonState();
   });
 
-  searchInput.addEventListener("keydown", (event) => {
+  searchInput.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key !== "Enter") {
       return;
     }
@@ -292,7 +333,7 @@ function wireEvents(): void {
   });
 
   // Allow pressing Enter to accept the first visible parent result without leaving the field.
-  createFolderParentSearch.addEventListener("keydown", (event) => {
+  createFolderParentSearch.addEventListener("keydown", (event: KeyboardEvent) => {
     if (event.key !== "Enter") {
       return;
     }
@@ -319,7 +360,7 @@ function wireEvents(): void {
   });
 
   // Submit the inline form to spawn the folder via the background script.
-  createFolderForm.addEventListener("submit", async (event) => {
+  createFolderForm.addEventListener("submit", async (event: SubmitEvent) => {
     event.preventDefault();
     await handleCreateFolderSubmit();
   });
@@ -342,7 +383,7 @@ function buildRow(folder: FolderEntry): RowElements {
 
   const checkbox = document.createElement("input");
   checkbox.type = "checkbox";
-  checkbox.addEventListener("click", (event) => {
+  checkbox.addEventListener("click", (event: MouseEvent) => {
     event.stopPropagation();
     const folderId = item.dataset.folderId!;
     if (existingBookmarkFolderIds.has(folderId)) {
@@ -440,10 +481,14 @@ function commitRender(folders: FolderEntry[]): void {
   }
 
   // Delete rows no longer in current result
-  for (const li of Array.from(resultsList.children) as HTMLLIElement[]) {
-    const existingFolderId = li.dataset.folderId!; // FolderId is guaranteed to exist.
-    if (!newFolderIdSet.has(existingFolderId)) {
-      li.remove();
+  for (const child of Array.from(resultsList.children)) {
+    if (!(child instanceof HTMLLIElement)) {
+      continue;
+    }
+
+    const existingFolderId = child.dataset.folderId;
+    if (!existingFolderId || !newFolderIdSet.has(existingFolderId)) {
+      child.remove();
     }
   }
 
@@ -558,7 +603,7 @@ function buildParentRow(folder: FolderEntry): HTMLLIElement {
   radio.name = "create-folder-parent";
   radio.checked = folder.id === selectedParentId;
   // Keep the radio change local so the list item click handler can still toggle selection.
-  radio.addEventListener("click", (event) => {
+  radio.addEventListener("click", (event: MouseEvent) => {
     event.stopPropagation();
     setSelectedParent(folder.id);
   });
@@ -635,18 +680,19 @@ async function handleCreateFolderSubmit(): Promise<void> {
   createFolderSubmitButton.disabled = true;
 
   try {
-    const created = (await browser.runtime.sendMessage({
+    const createdMessage: unknown = await browser.runtime.sendMessage({
       type: "create-folder",
       payload: {
         parentId,
         title: name,
       },
-    })) as BookmarkTreeNode | undefined;
+    });
 
-    if (!created || !created.id) {
+    if (!isBookmarkTreeNode(createdMessage)) {
       throw new Error("Background did not return created folder");
     }
 
+    const created: BookmarkTreeNode = createdMessage;
     const createdName = created.title?.trim() || name;
     const parentEntry = folderLookup.get(parentId);
     const parentPath = parentEntry ? [...parentEntry.path] : [];
@@ -685,7 +731,7 @@ async function handleCreateFolderSubmit(): Promise<void> {
     updateSearchClearButtonState();
     updateSaveButtonState();
     searchInput.focus();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to create folder", error);
   } finally {
     createFolderSubmitButton.disabled = false;
@@ -746,7 +792,7 @@ async function saveBookmarks(): Promise<void> {
     }
 
     window.close();
-  } catch (error) {
+  } catch (error: unknown) {
     console.error("Failed to save bookmarks", error);
   } finally {
     saveButton.disabled = selectedFolderIds.size === 0;
@@ -761,6 +807,6 @@ function updateSearchClearButtonState(): void {
   searchClearButton.hidden = searchInput.value.length === 0;
 }
 
-bootstrap().catch((error) => {
+bootstrap().catch((error: unknown) => {
   console.error("Failed to initialise popup", error);
 });

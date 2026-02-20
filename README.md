@@ -41,18 +41,32 @@ npm run build
 
 The popup can be opened from any tab with the extension command shortcut: `Ctrl+Shift+E` on Windows/Linux and `Command+Shift+E` on macOS. You can view or remap this shortcut in Firefox via **about:addons → Manage Extension Shortcuts**.
 
-## Firefox Add-ons (AMO) submission checklist
+## Reproduce the submitted build
 
-- Build a fresh `dist/` bundle with:
+Run these commands from the repository root:
+
 ```bash
+npm ci
 npm run build
 ```
-- Validate types before publishing:
+
+Build output is written to `dist/`:
+
+- `background.js` and `popup.js` are generated from `src/background.ts` and `src/popup.ts` by `tsc`.
+- `manifest.json`, `popup.html`, `popup.css`, and `icons/*` are copied from `static/` without transformation.
+
+The submitted extension package is created from the `dist/` contents only, with no manual edits after `npm run build`.
+
+### Build tooling disclosure
+
+- Uses the TypeScript compiler (`tsc`) to transpile `.ts` source files into `.js`.
+- Uses `scripts/build.js` to copy static assets and invoke `tsc`.
+- Does not use webpack/rollup/esbuild bundling, minification, template engines, or obfuscation.
+
+### Pre-submission validation
+
 ```bash
 npm run type-check
-```
-- Run Mozilla's extension validator in `dist/`:
-```bash
 npx web-ext lint -s dist
 ```
 

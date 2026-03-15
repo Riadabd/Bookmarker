@@ -281,6 +281,9 @@ function wireEvents(): void {
     }
 
     for (const folder of currentResults) {
+      if (existingBookmarkFolderIds.has(folder.id)) {
+        continue;
+      }
       selectedFolderIds.add(folder.id);
     }
 

@@ -34,7 +34,9 @@ npm run build
 - Focuses the folder search field as soon as the popup opens so typing can begin immediately.
 - Pressing `Enter` while typing selects every currently visible search result and keeps focus in the input for the next query.
 - Highlights folders where the current tab is already bookmarked (pre-checks them, greys the row, and labels “bookmark exists here”).
-- Immediately closes the popup after clicking **Save** while a background script writes bookmarks.
+- Waits for the selected bookmarks to be written before closing the popup.
+- Shows an inline error in the popup if bookmark creation fails.
+- After a failed multi-folder save, refreshes which folders already contain the bookmark and keeps only the remaining folders selected for retry.
 - Keeps the familiar Firefox bookmark editor layout to ease muscle memory.
 
 ## Keyboard shortcut

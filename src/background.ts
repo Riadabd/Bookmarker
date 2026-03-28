@@ -74,7 +74,7 @@ browser.runtime.onMessage.addListener(
         return undefined;
       }
 
-      // Perform the writes asynchronously so the popup can close without waiting.
+      // Let the popup await the full write so save failures stay visible in that UI.
       return createBookmarks(folders, title, url).catch((error: unknown) => {
         console.error("Failed to create bookmarks", error);
         throw error;

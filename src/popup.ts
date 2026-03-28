@@ -45,6 +45,10 @@ const saveButton: HTMLButtonElement = getRequiredElement(
   "save-bookmark",
   HTMLButtonElement
 );
+const saveError: HTMLParagraphElement = getRequiredElement(
+  "save-error",
+  HTMLParagraphElement
+);
 const removeButton: HTMLButtonElement = getRequiredElement(
   "remove-bookmark",
   HTMLButtonElement
@@ -110,6 +114,12 @@ type RowElements = {
   status: HTMLSpanElement;
 };
 
+type SaveFailureReconciliation = {
+  refreshed: boolean;
+  remainingCount: number;
+  succeededCount: number;
+};
+
 let rowByFolderId: Map<string, RowElements> = new Map<string, RowElements>();
 let pendingRender: FolderEntry[] | null = null;
 let renderScheduled = false;
@@ -131,6 +141,91 @@ function isPopupRecord(value: unknown): value is Record<string, unknown> {
 
 function isBookmarkTreeNode(value: unknown): value is BookmarkTreeNode {
   return isPopupRecord(value) && typeof value.id === "string";
+}
+
+function extractErrorMessage(error: unknown): string | null {
+  if (error instanceof Error && error.message.trim().length > 0) {
+    return error.message;
+  }
+
+  if (
+    isPopupRecord(error) &&
+    typeof error.message === "string" &&
+    error.message.trim().length > 0
+  ) {
+    return error.message;
+  }
+
+  return null;
+}
+
+function clearSaveError(): void {
+  saveError.hidden = true;
+  saveError.textContent = "";
+}
+
+function showSaveError(message: string): void {
+  saveError.textContent = message;
+  saveError.hidden = false;
+}
+
+async function reconcileSaveFailure(
+  url: string,
+  attemptedFolderIds: string[]
+): Promise<SaveFailureReconciliation> {
+  try {
+    // A failed multi-folder save may still have created some bookmarks, so re-read the tree first.
+    await refreshExistingBookmarkFolderIds(url);
+
+    // Rebuild the retry selection from only the folders that still need the bookmark.
+    selectedFolderIds.clear();
+    for (const folderId of attemptedFolderIds) {
+      if (existingBookmarkFolderIds.has(folderId)) {
+        continue;
+      }
+      selectedFolderIds.add(folderId);
+    }
+
+    renderResults(currentResults);
+
+    return {
+      refreshed: true,
+      remainingCount: selectedFolderIds.size,
+      succeededCount: attemptedFolderIds.length - selectedFolderIds.size,
+    };
+  } catch (refreshError: unknown) {
+    console.error("Failed to refresh bookmark state after save failure", refreshError);
+
+    return {
+      refreshed: false,
+      remainingCount: attemptedFolderIds.length,
+      succeededCount: 0,
+    };
+  }
+}
+
+function buildSaveErrorMessage(
+  error: unknown,
+  reconciliation: SaveFailureReconciliation
+): string {
+  const detail = extractErrorMessage(error);
+  const prefix = detail
+    ? `Bookmarking failed: ${detail}`
+    : "Bookmarking failed.";
+
+  if (!reconciliation.refreshed) {
+    return `${prefix} The popup could not confirm which folders succeeded, so close and reopen it before retrying.`;
+  }
+
+  if (reconciliation.succeededCount > 0 && reconciliation.remainingCount > 0) {
+    return `${prefix} Some selected folders already contain the bookmark. The remaining folders stay selected so you can try again.`;
+  }
+
+  if (reconciliation.succeededCount > 0) {
+    return `${prefix} Some selected folders already contain the bookmark, and there are no remaining folders left to retry.`;
+  }
+
+  return `${prefix} No selected folders appear to contain the bookmark yet. The same folders stay selected so you can try again.`;
 }
 
 async function bootstrap(): Promise<void> {
@@ -215,15 +310,27 @@ async function discoverExistingBookmarks(): Promise<void> {
   }
 
   try {
-    const existing = await findExistingBookmarks(activeTabUrl);
-    for (const bookmark of existing) {
-      if (!bookmark.parentId) {
-        continue;
-      }
-      existingBookmarkFolderIds.add(bookmark.parentId);
-    }
+    await refreshExistingBookmarkFolderIds(activeTabUrl);
   } catch (error: unknown) {
     console.error("Failed to detect existing bookmarks", error);
+  }
+}
+
+async function refreshExistingBookmarkFolderIds(url: string): Promise<void> {
+  const existing = await findExistingBookmarks(url);
+  const nextExistingFolderIds = new Set<string>();
+
+  for (const bookmark of existing) {
+    if (!bookmark.parentId) {
+      continue;
+    }
+    nextExistingFolderIds.add(bookmark.parentId);
+  }
+
+  // Replace the full set so initial load and retry reconciliation use the same source of truth.
+  existingBookmarkFolderIds.clear();
+  for (const folderId of nextExistingFolderIds) {
+    existingBookmarkFolderIds.add(folderId);
   }
 }
 
@@ -762,7 +869,10 @@ async function saveBookmarks(): Promise<void> {
     return;
   }
 
+  clearSaveError();
   saveButton.disabled = true;
+  let activeTabBookmarkUrl: string | undefined;
+  let attemptedFolderIds: string[] = [];
 
   try {
     const [activeTab] = await browser.tabs.query({
@@ -772,15 +882,18 @@ async function saveBookmarks(): Promise<void> {
     if (!activeTab?.url) {
       throw new Error("Active tab is missing URL");
     }
+    activeTabBookmarkUrl = activeTab.url;
 
     const title = nameInput.value.trim() || activeTab.title || activeTab.url;
     const targetFolders = Array.from(selectedFolderIds);
+    attemptedFolderIds = targetFolders;
 
     if (targetFolders.length === 0) {
       window.close();
       return;
     }
 
+    // Keep the popup open until every requested write resolves so failures can still surface here.
     await browser.runtime.sendMessage({
       type: "create-bookmarks",
       payload: {
@@ -797,6 +910,16 @@ async function saveBookmarks(): Promise<void> {
     window.close();
   } catch (error: unknown) {
     console.error("Failed to save bookmarks", error);
+    // Reconcile against the live bookmark tree before deciding what the user should retry.
+    const reconciliation =
+      activeTabBookmarkUrl && attemptedFolderIds.length > 0
+        ? await reconcileSaveFailure(activeTabBookmarkUrl, attemptedFolderIds)
+        : {
+            refreshed: false,
+            remainingCount: attemptedFolderIds.length,
+            succeededCount: 0,
+          };
+    showSaveError(buildSaveErrorMessage(error, reconciliation));
   } finally {
     saveButton.disabled = selectedFolderIds.size === 0;
   }

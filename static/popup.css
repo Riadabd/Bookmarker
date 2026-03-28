@@ -239,6 +239,14 @@ body {
   gap: 16px;
 }
 
+.dialog__error {
+  margin: 0;
+  flex: 1;
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 .dialog__buttons {
   display: inline-flex;
   gap: 8px;

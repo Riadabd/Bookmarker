@@ -17,13 +17,18 @@
       let
         pkgs = import nixpkgs { inherit system; };
         node = pkgs.nodejs_22;
+        fish = pkgs.fish;
       in
       {
         devShells.default = pkgs.mkShell {
-          packages = [ node ];
+          packages = [
+            fish
+            node
+          ];
 
           shellHook = ''
             export PATH="${node}/bin:$PATH"
+            export SHELL="${fish}/bin/fish"
 
             node_major="$(node -p 'process.versions.node.split(".")[0]')"
             npm_major="$(npm -v | cut -d. -f1)"
@@ -39,6 +44,11 @@
             fi
 
             echo "bookmarker dev shell ready: node $(node -v), npm $(npm -v)"
+
+            # `nix develop` always starts in bash, so switch interactive sessions to fish.
+            case "$-" in
+              *i*) exec "${fish}/bin/fish" ;;
+            esac
           '';
         };
       }

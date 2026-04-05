@@ -72,6 +72,29 @@ npm run type-check
 npx web-ext lint -s dist
 ```
 
+After those checks pass, create the submission zip from inside `dist/` so the archive contains the built files at its root.
+
+macOS:
+
+```bash
+cd dist
+zip -r -FS ../../bookmark-folder-finder-0.1.1.zip . -x '*.DS_Store'
+```
+
+Linux:
+
+```bash
+cd dist
+zip -r -FS ../../bookmark-folder-finder-0.1.1.zip .
+```
+
+Windows (PowerShell):
+
+```powershell
+Set-Location dist
+Compress-Archive -Path * -DestinationPath ..\..\bookmark-folder-finder-0.1.1.zip -Force
+```
+
 ### Notable limitations
 
 - The *Remove bookmark* control is visually present for parity with the native UI but disabled until removal logic is implemented.

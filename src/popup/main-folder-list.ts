@@ -10,8 +10,8 @@ type MainFolderListState = {
 type MainFolderRow = {
   element: HTMLLIElement;
   checkbox: HTMLInputElement;
-  name: HTMLDivElement;
-  path: HTMLDivElement;
+  name: HTMLSpanElement;
+  path: HTMLSpanElement;
   status: HTMLSpanElement;
 };
 
@@ -30,11 +30,6 @@ export function createMainFolderList(
 ): MainFolderList {
   const { listElement, onToggle } = options;
 
-  let renderState: MainFolderListState = {
-    selectedIds: new Set<string>(),
-    existingIds: new Set<string>(),
-  };
-
   const core = createFolderListCore<MainFolderRow, MainFolderListState>({
     listElement,
     emptyStateText: "No matching folders",
@@ -43,25 +38,22 @@ export function createMainFolderList(
       item.className = "folder-list__item";
       item.dataset.folderId = folder.id;
 
+      const control = document.createElement("label");
+      control.className = "folder-list__control";
+
       const checkbox = document.createElement("input");
       checkbox.type = "checkbox";
-      checkbox.addEventListener("click", (event: MouseEvent) => {
-        event.stopPropagation();
-        if (renderState.existingIds.has(folder.id)) {
-          event.preventDefault();
-          return;
-        }
-
+      checkbox.addEventListener("change", () => {
         onToggle(folder.id, checkbox.checked);
       });
 
-      const labelContainer = document.createElement("div");
+      const labelContainer = document.createElement("span");
       labelContainer.className = "folder-list__label";
 
-      const nameRow = document.createElement("div");
+      const nameRow = document.createElement("span");
       nameRow.className = "folder-list__name-row";
 
-      const nameSpan = document.createElement("div");
+      const nameSpan = document.createElement("span");
       nameSpan.className = "folder-list__name";
       nameSpan.textContent = folder.name;
 
@@ -73,23 +65,16 @@ export function createMainFolderList(
       nameRow.appendChild(nameSpan);
       nameRow.appendChild(statusSpan);
 
-      const pathSpan = document.createElement("div");
+      const pathSpan = document.createElement("span");
       pathSpan.className = "folder-list__path";
       pathSpan.textContent = formatFolderPath(folder);
 
       labelContainer.appendChild(nameRow);
       labelContainer.appendChild(pathSpan);
 
-      item.appendChild(checkbox);
-      item.appendChild(labelContainer);
-
-      item.addEventListener("click", () => {
-        if (renderState.existingIds.has(folder.id)) {
-          return;
-        }
-
-        onToggle(folder.id, !renderState.selectedIds.has(folder.id));
-      });
+      control.appendChild(checkbox);
+      control.appendChild(labelContainer);
+      item.appendChild(control);
 
       return {
         element: item,
@@ -125,14 +110,5 @@ export function createMainFolderList(
     },
   });
 
-  return {
-    render(folders, state) {
-      renderState = {
-        selectedIds: new Set(state.selectedIds),
-        existingIds: new Set(state.existingIds),
-      };
-      core.render(folders, renderState);
-    },
-    clear: core.clear,
-  };
+  return core;
 }

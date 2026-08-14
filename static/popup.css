@@ -148,26 +148,29 @@ body {
 }
 
 .folder-list__item {
+  transition: background 0.15s ease;
+}
+
+.folder-list__control {
   display: flex;
   align-items: center;
   gap: 8px;
   padding: 8px 12px;
   cursor: pointer;
-  transition: background 0.15s ease;
+  width: 100%;
 }
 
 .folder-list__item--existing {
   background: rgba(255, 255, 255, 0.04);
   border-left: 3px solid transparent;
+}
+
+.folder-list__item--existing .folder-list__control {
   cursor: default;
 }
 
 .folder-list__item:hover {
   background: var(--bg-active-soft);
-}
-
-.folder-list__item--existing:hover {
-  cursor: default;
 }
 
 .folder-list__item--selected {

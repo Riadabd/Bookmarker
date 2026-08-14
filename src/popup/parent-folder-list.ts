@@ -9,8 +9,8 @@ type ParentFolderListState = {
 type ParentFolderRow = {
   element: HTMLLIElement;
   radio: HTMLInputElement;
-  name: HTMLDivElement;
-  path: HTMLDivElement;
+  name: HTMLSpanElement;
+  path: HTMLSpanElement;
 };
 
 export type ParentFolderList = {
@@ -28,10 +28,6 @@ export function createParentFolderList(
 ): ParentFolderList {
   const { listElement, onSelect } = options;
 
-  let renderState: ParentFolderListState = {
-    selectedId: null,
-  };
-
   const core = createFolderListCore<ParentFolderRow, ParentFolderListState>({
     listElement,
     emptyStateText: "No parent matches",
@@ -40,25 +36,29 @@ export function createParentFolderList(
       item.className = "folder-list__item";
       item.dataset.folderId = folder.id;
 
+      const control = document.createElement("label");
+      control.className = "folder-list__control";
+
       const radio = document.createElement("input");
       radio.type = "radio";
       radio.name = "create-folder-parent";
-      radio.addEventListener("click", (event: MouseEvent) => {
-        event.stopPropagation();
-        onSelect(folder.id);
+      radio.addEventListener("change", () => {
+        if (radio.checked) {
+          onSelect(folder.id);
+        }
       });
 
-      const labelContainer = document.createElement("div");
+      const labelContainer = document.createElement("span");
       labelContainer.className = "folder-list__label";
 
-      const nameRow = document.createElement("div");
+      const nameRow = document.createElement("span");
       nameRow.className = "folder-list__name-row";
 
-      const nameSpan = document.createElement("div");
+      const nameSpan = document.createElement("span");
       nameSpan.className = "folder-list__name";
       nameSpan.textContent = folder.name;
 
-      const pathSpan = document.createElement("div");
+      const pathSpan = document.createElement("span");
       pathSpan.className = "folder-list__path";
       pathSpan.textContent = formatFolderPath(folder);
 
@@ -66,12 +66,9 @@ export function createParentFolderList(
       labelContainer.appendChild(nameRow);
       labelContainer.appendChild(pathSpan);
 
-      item.appendChild(radio);
-      item.appendChild(labelContainer);
-
-      item.addEventListener("click", () => {
-        onSelect(folder.id);
-      });
+      control.appendChild(radio);
+      control.appendChild(labelContainer);
+      item.appendChild(control);
 
       return {
         element: item,
@@ -98,11 +95,5 @@ export function createParentFolderList(
     },
   });
 
-  return {
-    render(folders, state) {
-      renderState = { selectedId: state.selectedId };
-      core.render(folders, renderState);
-    },
-    clear: core.clear,
-  };
+  return core;
 }

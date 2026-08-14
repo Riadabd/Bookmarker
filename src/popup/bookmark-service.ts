@@ -11,7 +11,7 @@ export type BookmarkService = {
     folderIds: string[],
     title: string,
     url: string
-  ) => Promise<void>;
+  ) => Promise<ReadonlyMap<string, unknown>>;
 };
 
 export function createBookmarkService(): BookmarkService {
@@ -70,12 +70,25 @@ async function createBookmarks(
   folderIds: string[],
   title: string,
   url: string
-): Promise<void> {
+): Promise<ReadonlyMap<string, unknown>> {
+  const failures = new Map<string, unknown>();
+
   await Promise.all(
-    folderIds.map((parentId) =>
-      browser.bookmarks.create({ parentId, title, url, type: "bookmark" })
-    )
+    folderIds.map(async (parentId) => {
+      try {
+        await browser.bookmarks.create({
+          parentId,
+          title,
+          url,
+          type: "bookmark",
+        });
+      } catch (error: unknown) {
+        failures.set(parentId, error);
+      }
+    })
   );
+
+  return failures;
 }
 
 async function findExistingBookmarks(url: string): Promise<BookmarkTreeNode[]> {

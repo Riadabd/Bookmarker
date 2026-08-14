@@ -17,12 +17,6 @@ export type ActiveTabDetails = {
   url?: string;
 };
 
-export type SaveFailureReconciliation = {
-  refreshed: boolean;
-  remainingCount: number;
-  succeededCount: number;
-};
-
 export type CreatedFolderNotification = {
   parentId: string;
   folder: BookmarkTreeNode;

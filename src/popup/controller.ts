@@ -13,7 +13,6 @@ import type {
   CreatedFolderNotification,
   FolderEntry,
   FolderIndex,
-  SaveFailureReconciliation,
 } from "./types.js";
 
 type PopupControllerOptions = {
@@ -208,86 +207,55 @@ export function createPopupController(
     clearSaveError();
     footer.saveButton.disabled = true;
 
-    let activeTabBookmarkUrl = activeTab.url;
-    let attemptedFolderIds: string[] = [];
-
     try {
       activeTab = await service.getActiveTabDetails();
       if (!activeTab.url) {
         throw new Error("Active tab is missing URL");
       }
 
-      activeTabBookmarkUrl = activeTab.url;
-
       const title =
         mainPicker.nameInput.value.trim() || activeTab.title || activeTab.url;
       const targetFolders = Array.from(selectedFolderIds);
-      attemptedFolderIds = targetFolders;
+      const failures = await service.createBookmarks(
+        targetFolders,
+        title,
+        activeTab.url
+      );
 
-      if (targetFolders.length === 0) {
+      selectedFolderIds.clear();
+      for (const folderId of targetFolders) {
+        if (failures.has(folderId)) {
+          selectedFolderIds.add(folderId);
+        } else {
+          existingBookmarkFolderIds.add(folderId);
+        }
+      }
+
+      if (failures.size === 0) {
         window.close();
         return;
       }
 
-      await service.createBookmarks(targetFolders, title, activeTab.url);
-
-      for (const folderId of targetFolders) {
-        existingBookmarkFolderIds.add(folderId);
-      }
-
-      window.close();
+      renderMainResults(currentMainResults);
+      const firstFailure = failures.values().next();
+      showSaveError(
+        buildSaveErrorMessage(
+          firstFailure.done ? null : firstFailure.value,
+          failures.size,
+          targetFolders.length
+        )
+      );
     } catch (error: unknown) {
       console.error("Failed to save bookmarks", error);
-      const reconciliation =
-        activeTabBookmarkUrl && attemptedFolderIds.length > 0
-          ? await reconcileSaveFailure(activeTabBookmarkUrl, attemptedFolderIds)
-          : {
-              refreshed: false,
-              remainingCount: attemptedFolderIds.length,
-              succeededCount: 0,
-            };
-
-      showSaveError(buildSaveErrorMessage(error, reconciliation));
+      showSaveError(
+        buildSaveErrorMessage(
+          error,
+          selectedFolderIds.size,
+          selectedFolderIds.size
+        )
+      );
     } finally {
       updateSaveButtonState();
-    }
-  }
-
-  async function reconcileSaveFailure(
-    url: string,
-    attemptedFolderIds: string[]
-  ): Promise<SaveFailureReconciliation> {
-    try {
-      const existingIds = await service.findExistingBookmarkFolderIds(url);
-      replaceSet(existingBookmarkFolderIds, existingIds);
-
-      selectedFolderIds.clear();
-      for (const folderId of attemptedFolderIds) {
-        if (existingBookmarkFolderIds.has(folderId)) {
-          continue;
-        }
-
-        selectedFolderIds.add(folderId);
-      }
-
-      renderMainResults(currentMainResults);
-
-      return {
-        refreshed: true,
-        remainingCount: selectedFolderIds.size,
-        succeededCount: attemptedFolderIds.length - selectedFolderIds.size,
-      };
-    } catch (refreshError: unknown) {
-      console.error(
-        "Failed to refresh bookmark state after save failure",
-        refreshError
-      );
-
-      return {
-        refreshed: false,
-        remainingCount: attemptedFolderIds.length,
-        succeededCount: 0,
-      };
     }
   }
 
@@ -319,26 +287,19 @@ export function createPopupController(
 
 function buildSaveErrorMessage(
   error: unknown,
-  reconciliation: SaveFailureReconciliation
+  failedCount: number,
+  attemptedCount: number
 ): string {
   const detail = extractErrorMessage(error);
   const prefix = detail
     ? `Bookmarking failed: ${detail}`
     : "Bookmarking failed.";
 
-  if (!reconciliation.refreshed) {
-    return `${prefix} The popup could not confirm which folders succeeded, so close and reopen it before retrying.`;
+  if (failedCount < attemptedCount) {
+    return `${prefix} ${failedCount} of ${attemptedCount} folders failed. The failed folders stay selected so you can try again.`;
   }
 
-  if (reconciliation.succeededCount > 0 && reconciliation.remainingCount > 0) {
-    return `${prefix} Some selected folders already contain the bookmark. The remaining folders stay selected so you can try again.`;
-  }
-
-  if (reconciliation.succeededCount > 0) {
-    return `${prefix} Some selected folders already contain the bookmark, and there are no remaining folders left to retry.`;
-  }
-
-  return `${prefix} No selected folders appear to contain the bookmark yet. The same folders stay selected so you can try again.`;
+  return `${prefix} The selected folders stay selected so you can try again.`;
 }
 
 function extractErrorMessage(error: unknown): string | null {

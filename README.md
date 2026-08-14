@@ -20,7 +20,7 @@ npm run build
 
 ## Project layout
 
-- `src/` – TypeScript sources for the popup and background scripts.
+- `src/` – TypeScript sources for the popup.
 - `static/` – HTML, CSS, icons, and the source manifest copied directly into the build.
 - `dist/` – Build artifacts produced by `npm run build`, ready to load in Firefox.
 - `scripts/build.js` – Lightweight build script that copies static assets and runs the TypeScript compiler.
@@ -54,7 +54,7 @@ npm run build
 
 Build output is written to `dist/`:
 
-- `background.js` and `popup.js` are generated from `src/background.ts` and `src/popup.ts` by `tsc`.
+- `popup.js` and `popup/*.js` are generated from `src/` by `tsc`.
 - `manifest.json`, `popup.html`, `popup.css`, and `icons/*` are copied from `static/` without transformation.
 
 The submitted extension package is created from the `dist/` contents only, with no manual edits after `npm run build`.

@@ -59,19 +59,11 @@ async function createFolder(
   parentId: string,
   title: string
 ): Promise<BookmarkTreeNode> {
-  const createdMessage: unknown = await browser.runtime.sendMessage({
-    type: "create-folder",
-    payload: {
-      parentId,
-      title,
-    },
+  return browser.bookmarks.create({
+    parentId,
+    title,
+    type: "folder",
   });
-
-  if (!isBookmarkTreeNode(createdMessage)) {
-    throw new Error("Background did not return created folder");
-  }
-
-  return createdMessage;
 }
 
 async function createBookmarks(
@@ -79,14 +71,11 @@ async function createBookmarks(
   title: string,
   url: string
 ): Promise<void> {
-  await browser.runtime.sendMessage({
-    type: "create-bookmarks",
-    payload: {
-      folders: folderIds,
-      title,
-      url,
-    },
-  });
+  await Promise.all(
+    folderIds.map((parentId) =>
+      browser.bookmarks.create({ parentId, title, url, type: "bookmark" })
+    )
+  );
 }
 
 async function findExistingBookmarks(url: string): Promise<BookmarkTreeNode[]> {
@@ -122,8 +111,4 @@ function isInvalidUrlQueryError(error: unknown): boolean {
 
 function isPopupRecord(value: unknown): value is PopupRecord {
   return typeof value === "object" && value !== null;
-}
-
-function isBookmarkTreeNode(value: unknown): value is BookmarkTreeNode {
-  return isPopupRecord(value) && typeof value.id === "string";
 }

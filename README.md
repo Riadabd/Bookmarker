@@ -78,21 +78,21 @@ macOS:
 
 ```bash
 cd dist
-zip -r -FS ../../bookmark-folder-finder-0.1.1.zip . -x '*.DS_Store'
+zip -r -FS ../../bookmark-folder-finder-0.2.0.zip . -x '*.DS_Store'
 ```
 
 Linux:
 
 ```bash
 cd dist
-zip -r -FS ../../bookmark-folder-finder-0.1.1.zip .
+zip -r -FS ../../bookmark-folder-finder-0.2.0.zip .
 ```
 
 Windows (PowerShell):
 
 ```powershell
 Set-Location dist
-Compress-Archive -Path * -DestinationPath ..\..\bookmark-folder-finder-0.1.1.zip -Force
+Compress-Archive -Path * -DestinationPath ..\..\bookmark-folder-finder-0.2.0.zip -Force
 ```
 
 ### Notable limitations

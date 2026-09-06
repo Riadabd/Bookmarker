@@ -85,9 +85,11 @@ export function createPopupController(
   }
 
   async function bootstrap(): Promise<void> {
-    await populateTabDetails();
-    await loadFolders();
-    await discoverExistingBookmarks();
+    // Folder loading is independent; bookmark discovery needs the active tab URL.
+    await Promise.all([
+      populateTabDetails().then(() => discoverExistingBookmarks()),
+      loadFolders(),
+    ]);
     wireEvents();
     renderMainResults(getDefaultFolders(folderIndex, 25));
     mainPicker.searchInput.focus();

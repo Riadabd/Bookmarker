@@ -45,6 +45,13 @@ The popup can be opened from any tab with the extension command shortcut: `Ctrl+
 
 ## Reproduce the submitted build
 
+### Build environment
+
+- Any operating system supported by Node.js; no OS-specific build tools are required.
+- Node.js 22.x with npm 10.x or 11.x.
+- Install Node.js and npm from [nodejs.org](https://nodejs.org/en/download), then verify the installation with `node --version` and `npm --version`.
+- Alternatively, install [Nix](https://nixos.org/download/) and run `nix develop`; the checked-in `flake.nix` and `flake.lock` provide Node.js 22 and npm 10.
+
 Run these commands from the repository root:
 
 ```bash
